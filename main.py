@@ -1,16 +1,33 @@
-# This is a sample Python script.
+import argparse
+import pandas as pd
+import numpy as np
+import pickle
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+parser = argparse.ArgumentParser(description="Get Path of Files.")
+parser.add_argument(
+    "-p",
+    "--pickleFile",
+    metavar="path",
+    dest="pklpath",
+    type=str,
+    help="Path of Pickle File Containing Price Data.",
+)
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def dict2np(data: pd.DataFrame) -> np.array:
+    tmp = []
+    for i in data:
+        tmp.append(data[i].to_numpy())
+    return np.array(tmp)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+if __name__ == "__main__":
+    # load data
+    args = parser.parse_args()
+    if args.pklpath is None:
+        print("Missing options ...")
+        exit()
+    with open(args.pklpath, "rb") as f:
+        data = pickle.load(f)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    data = dict2np(data)

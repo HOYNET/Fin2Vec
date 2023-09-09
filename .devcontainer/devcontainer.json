@@ -1,0 +1,15 @@
+{
+  "name": "Hoynet - Anaconda Container",
+  "image": "mcr.microsoft.com/vscode/devcontainers/anaconda:0-3",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash",
+    "python.pythonPath": "/opt/conda/envs/hoynet/bin/python",
+    "python.linting.flake8Enabled": true,
+    "python.formatting.provider": "black"
+  },
+  "postCreateCommand": "conda create --name hoynet python=3.11 -y && conda install -n hoynet flake8 black -y && conda install -n hoynet --file ./requirements.txt -y",
+  "extensions": [
+    "ms-python.python"
+  ],
+  "remoteUser": "vscode"
+}
