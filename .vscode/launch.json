@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: main.py",
+            "name": "Python: training.py",
             "type": "python",
             "request": "launch",
-            "program": "main.py",
+            "program": "training.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["-p","./data/NASDAQ_DT_FC_STK_QUT.csv","-c","./data/NASDAQ_FC_STK_IEM_IFO.csv"]
