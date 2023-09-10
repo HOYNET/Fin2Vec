@@ -20,8 +20,8 @@ def train(dataloader, model, loss_fn, optimizer):
             loss, current = loss.item(), (batch + 1) * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
+
 def test(dataloader, model, loss_fn):
-    size = len(dataloader.dataset)
     num_batches = len(dataloader)
     model.eval()
     test_loss = 0
@@ -31,8 +31,8 @@ def test(dataloader, model, loss_fn):
             pred = model(X)
             test_loss += loss_fn(pred, y).item()
     test_loss /= num_batches
-    correct /= size
     print(f"Test Error: \n Avg loss: {test_loss:>8f} \n")
+
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
 parser.add_argument(
