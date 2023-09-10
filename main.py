@@ -1,33 +1,29 @@
 import argparse
-import pandas as pd
-import numpy as np
-import pickle
+from torch.utils.data import DataLoader
+from parse import stockDataset
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
 parser.add_argument(
     "-p",
-    "--pickleFile",
+    "--priceFile",
     metavar="path",
-    dest="pklpath",
+    dest="price",
     type=str,
-    help="Path of Pickle File Containing Price Data.",
+    help="Path of Price File.",
 )
-
-
-def dict2np(data: pd.DataFrame) -> np.array:
-    tmp = []
-    for i in data:
-        tmp.append(data[i].to_numpy())
-    return np.array(tmp)
-
+parser.add_argument(
+    "-c",
+    "--codeFile",
+    metavar="path",
+    dest="code",
+    type=str,
+    help="Path of Code Info File.",
+)
 
 if __name__ == "__main__":
     # load data
     args = parser.parse_args()
-    if args.pklpath is None:
+    if args.code is None or args.price is None:
         print("Missing options ...")
         exit()
-    with open(args.pklpath, "rb") as f:
-        data = pickle.load(f)
-
-    data = dict2np(data)
+    dataLoader = DataLoader(stockDataset(args.code, args.price, True))
