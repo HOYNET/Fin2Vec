@@ -79,6 +79,14 @@ parser.add_argument(
     type=int,
     help="Size of Epoch.",
 )
+parser.add_argument(
+    "-l",
+    "--learningRate",
+    metavar="size",
+    dest="lr",
+    type=float,
+    help="Learning Rate.",
+)
 
 if __name__ == "__main__":
     # parse arguments
@@ -88,6 +96,7 @@ if __name__ == "__main__":
         or args.price is None
         or args.batchSize is None
         or args.epochs is None
+        or args.lr is None
     ):
         print("Missing options ...")
         exit()
@@ -111,8 +120,8 @@ if __name__ == "__main__":
         (5, 5),
     )
     model = Hoynet(dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize)
-    lossFn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.00001)
+    lossFn = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     # training
     for t in range(args.epochs):
         print(f"Epoch {t+1}\n-------------------------------")
