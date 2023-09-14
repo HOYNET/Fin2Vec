@@ -5,12 +5,12 @@ from torch import nn
 class Encoder(nn.Module):
     def __init__(
         self,
-        dates,
-        inputSize,
-        hiddenSize,
-        layerSize,
-        fusionSize,
-        embeddingSize: (int, int),
+        dates: int,  # number of sequences
+        inputSize: int,  # number of features
+        hiddenSize: int,  # size of hiddenlayer
+        layerSize: int,  # size of layer in GRU
+        fusionSize: int,  # size of fusion features
+        embeddingSize: (int, int),  # size of embedding
     ):
         super().__init__()
         self.dates = dates
@@ -99,7 +99,10 @@ class Encoder(nn.Module):
         )
         self.rnnFusion = nn.Linear(self.dates, fusionSize)
 
-        self.finalFusion = nn.Linear(2 * fusionSize, self.embeddingSize[1])
+        self.finalFusion = nn.Sequential(
+            nn.Linear(2 * fusionSize, self.embeddingSize[1]),
+            nn.BatchNorm1d(embeddingSize[0]),
+        )
 
     def forward(self, x):
         cnnInput = x
@@ -113,7 +116,6 @@ class Encoder(nn.Module):
 
         cnnFusion = torch.concat(features[0:3], dim=2)
         cnnFusion = self.cnnFusion(cnnFusion)
-
         rnnFusion = self.rnnFusion(features[-1])
 
         finalFusion = torch.concat((cnnFusion, rnnFusion), dim=2)
@@ -129,22 +131,39 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1):
+    def __init__(self, dates: int, outputSize: int, embeddingSize: (int, int)):
         super().__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+        self.dates = dates
+        self.outputSize = outputSize
+        self.embeddingSize = embeddingSize
 
-        self.lstm = nn.LSTM(
-            input_size=input_size, hidden_size=hidden_size, num_layers=num_layers
+        self.larger0 = nn.Linear(embeddingSize[1], 60)
+
+        self.cnv = nn.Sequential(
+            nn.Conv1d(
+                in_channels=self.embeddingSize[0],
+                out_channels=64,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+            ),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(
+                in_channels=64,
+                out_channels=outputSize,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+            ),
         )
-        self.linear = nn.Linear(hidden_size, input_size)
 
-    def forward(self, x_input, encoder_hidden_states):
-        lstm_out, self.hidden = self.lstm(x_input.unsqueeze(0), encoder_hidden_states)
-        output = self.linear(lstm_out.squeeze(0))
+        self.larger1 = nn.Linear(60, dates)
 
-        return output, self.hidden
+    def forward(self, x):
+        result = self.larger0(x)
+        result = self.cnv(result)
+        result = self.larger1(result)
+        return result
 
 
 class Hoynet(nn.Module):
@@ -161,9 +180,9 @@ class Hoynet(nn.Module):
         self.encoder = Encoder(
             dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize
         )
-        # self.decoder = Decoder()
+        self.decoder = Decoder(dates, inputSize, embeddingSize)
 
     def forward(self, x):
         result = self.encoder(x)
-        # result = self.decoder(result)
+        result = self.decoder(result)
         return result

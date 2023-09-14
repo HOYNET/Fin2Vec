@@ -15,6 +15,12 @@ def train(dataloader, model, loss_fn, optimizer):
         x, y = x.to(device).to(dtype=torch.float32), y.to(device).to(
             dtype=torch.float32
         )
+
+        # normalization
+        x = torch.layer_norm(x, normalized_shape=x.shape)
+        y = torch.layer_norm(y, normalized_shape=y.shape)
+
+        # forward
         pred = model(x)
         loss = loss_fn(pred, y)
 
@@ -22,9 +28,9 @@ def train(dataloader, model, loss_fn, optimizer):
         loss.backward()
         optimizer.step()
 
-        if i % 100 == 0:
+        if i % 10 == 0:
             loss, current = loss.item(), (i + 1) * len(x)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+            print(f"loss: {loss}  [{current:>5d}/{size:>5d}]")
 
 
 def test(dataloader, model, loss_fn):
@@ -88,21 +94,25 @@ if __name__ == "__main__":
 
     # make dataLoader
     traindataset = stockDataset(args.code, args.price, True)
-    traindataLoader = DataLoader(traindataset, batch_size=args.batchSize)
+    traindataLoader = DataLoader(
+        traindataset,
+        batch_size=args.batchSize,
+        shuffle=True,
+    )
 
     # make model
-    dummy = next(iter(traindataLoader))['data']
+    dummy = next(iter(traindataLoader))["data"]
     dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize = (
         dummy.shape[-1],
         dummy.shape[-2],
         64,
         7,
         32,
-        (12,16),
+        (5, 5),
     )
     model = Hoynet(dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize)
     lossFn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.00001)
     # training
     for t in range(args.epochs):
         print(f"Epoch {t+1}\n-------------------------------")
