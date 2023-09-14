@@ -12,3 +12,8 @@
 ```bash
         conda deactivate
 ```
+
+* training
+  ```bash
+  python training.py -p ./data/NASDAQ_DT_FC_STK_QUT.csv -c ./data/NASDAQ_FC_STK_IEM_IFO.csv -b 100 -e 100 -l 0.0001
+  ```
