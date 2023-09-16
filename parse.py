@@ -21,6 +21,6 @@ class stockDataset(Dataset):
         data: pd.DataFrame = self.rawPrice[self.rawPrice["tck_iem_cd"] == code].copy()
         data["trd_dt"] = pd.to_datetime(data["trd_dt"], format="%Y%m%d")
         data.set_index("trd_dt", inplace=True)
-        data.drop(columns=["tck_iem_cd"], inplace=True)
+        data.drop(columns=["tck_iem_cd","gts_sll_cns_sum_qty","gts_byn_cns_sum_qty","gts_acl_trd_qty","gts_iem_end_pr"], inplace=True)
         data = data.to_numpy().transpose((1, 0))
         return {"data": data, "label": data}

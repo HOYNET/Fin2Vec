@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -17,9 +18,12 @@ def train(dataloader, model, loss_fn, optimizer):
         )
 
         # normalization
-        x = torch.layer_norm(x, normalized_shape=x.shape)
-        y = torch.layer_norm(y, normalized_shape=y.shape)
-
+        # x = torch.layer_norm(x, normalized_shape=x.shape)
+        # y = torch.layer_norm(y, normalized_shape=y.shape)
+        # Max normalization
+        xMax, yMax = x.max(dim=-1, keepdim=True)[0], y.max(dim=-1, keepdim=True)[0]
+        x,y = x/xMax, y/yMax
+        
         # forward
         pred = model(x)
         loss = loss_fn(pred, y)
@@ -87,6 +91,14 @@ parser.add_argument(
     type=float,
     help="Learning Rate.",
 )
+parser.add_argument(
+    "-s",
+    "--embeddingSize",
+    metavar="size",
+    dest="embeddingSize",
+    type=lambda x: tuple(map(int, x.split(","))),
+    help="Size of Embedding.",
+)
 
 if __name__ == "__main__":
     # parse arguments
@@ -97,6 +109,7 @@ if __name__ == "__main__":
         or args.batchSize is None
         or args.epochs is None
         or args.lr is None
+        or args.embeddingSize is None
     ):
         print("Missing options ...")
         exit()
@@ -117,7 +130,7 @@ if __name__ == "__main__":
         64,
         7,
         32,
-        (5, 5),
+        args.embeddingSize,
     )
     model = Hoynet(dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize)
     lossFn = nn.MSELoss()
@@ -127,3 +140,6 @@ if __name__ == "__main__":
         print(f"Epoch {t+1}\n-------------------------------")
         train(traindataLoader, model, lossFn, optimizer)
         # test(test_dataloader, model, loss_fn)
+        if t % 5 == 0:
+            path = "./checkpoints/hoynet_" + str(t) + ".pth"
+            torch.save(model.state_dict(), path)
