@@ -111,7 +111,7 @@ class Encoder(nn.Module):
             self.cnv1Ddaily(cnnInput),
             self.cnv1Dweekly(cnnInput),
             self.cnv1Dmonthly(cnnInput),
-            self.rnn(rnnInput)[1].transpose(-2,-3).transpose(-1,-2),
+            self.rnn(rnnInput)[1].transpose(-2, -3).transpose(-1, -2),
         ]
 
         cnnFusion = torch.concat(features[0:3], dim=2)
@@ -137,11 +137,22 @@ class Decoder(nn.Module):
         self.outputSize = outputSize
         self.embeddingSize = embeddingSize
 
-        self.larger0 = nn.Linear(embeddingSize[1], 60)
+        self.larger0 = nn.Sequential(
+            nn.Linear(embeddingSize[1], embeddingSize[1] * 2),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(
+                in_channels=self.embeddingSize[0],
+                out_channels=self.embeddingSize[0] * 2,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+            ),
+            nn.Linear(embeddingSize[1] * 2, embeddingSize[1] * 4),
+        )
 
         self.cnv = nn.Sequential(
             nn.Conv1d(
-                in_channels=self.embeddingSize[0],
+                in_channels=self.embeddingSize[0]*2,
                 out_channels=64,
                 kernel_size=1,
                 stride=1,
@@ -157,7 +168,7 @@ class Decoder(nn.Module):
             ),
         )
 
-        self.larger1 = nn.Linear(60, dates)
+        self.larger1 = nn.Linear(embeddingSize[1] * 4, dates)
 
     def forward(self, x):
         result = self.larger0(x)

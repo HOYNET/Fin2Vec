@@ -10,7 +10,7 @@ def visualize(x: np.ndarray, pred: np.ndarray, epoch, batch, columns) -> None:
     assert xShape == predShape
 
     # Create a figure and subplots
-    fig, axs = plt.subplots(1, 3, figsize=(30, 10))
+    fig, axs = plt.subplots(1, xShape[-2], figsize=(10 * xShape[-1], 10))
 
     # Loop through each feature and plot it in a separate subplot using line plots
     for i in range(xShape[-2]):
@@ -35,7 +35,7 @@ def visualize(x: np.ndarray, pred: np.ndarray, epoch, batch, columns) -> None:
 
     # Show the plot
     plt.tight_layout()
-    plt.savefig("./checkpoints/"+str(epoch) + "-" + str(batch) + ".png")
+    plt.savefig("./checkpoints/" + str(epoch) + "-" + str(batch) + ".png")
     plt.close()
 
     return None
