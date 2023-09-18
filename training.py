@@ -1,5 +1,5 @@
 import argparse
-import numpy as np
+from visualize import visualize
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -9,7 +9,7 @@ from model import Hoynet
 device = torch.device("cpu")
 
 
-def train(dataloader, model, loss_fn, optimizer):
+def train(dataloader, model, loss_fn, optimizer, epochs: int):
     size = len(dataloader.dataset)
     for i, batch in enumerate(dataloader):
         x, y = batch["data"], batch["label"]
@@ -22,8 +22,8 @@ def train(dataloader, model, loss_fn, optimizer):
         # y = torch.layer_norm(y, normalized_shape=y.shape)
         # Max normalization
         xMax, yMax = x.max(dim=-1, keepdim=True)[0], y.max(dim=-1, keepdim=True)[0]
-        x,y = x/xMax, y/yMax
-        
+        x, y = x / xMax, y / yMax
+
         # forward
         pred = model(x)
         loss = loss_fn(pred, y)
@@ -35,6 +35,14 @@ def train(dataloader, model, loss_fn, optimizer):
         if i % 10 == 0:
             loss, current = loss.item(), (i + 1) * len(x)
             print(f"loss: {loss}  [{current:>5d}/{size:>5d}]")
+            x, pred = x * xMax, pred * yMax
+            visualize(
+                x[0].detach().numpy(),
+                pred[0].detach().numpy(),
+                epochs,
+                i,
+                ["gts_iem_ong_pr", "gts_iem_hi_pr", "gts_iem_low_pr"],
+            )
 
 
 def test(dataloader, model, loss_fn):
@@ -138,7 +146,7 @@ if __name__ == "__main__":
     # training
     for t in range(args.epochs):
         print(f"Epoch {t+1}\n-------------------------------")
-        train(traindataLoader, model, lossFn, optimizer)
+        train(traindataLoader, model, lossFn, optimizer, t)
         # test(test_dataloader, model, loss_fn)
         if t % 5 == 0:
             path = "./checkpoints/hoynet_" + str(t) + ".pth"

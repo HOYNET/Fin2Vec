@@ -1,2 +1,5 @@
 *.csv
 ./data/*
+*.png
+*.pth
+*.pyc

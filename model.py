@@ -97,7 +97,7 @@ class Encoder(nn.Module):
                 batch_first=True,
             )
         )
-        self.rnnFusion = nn.Linear(self.dates, fusionSize)
+        self.rnnFusion = nn.Linear(self.layerSize, fusionSize)
 
         self.finalFusion = nn.Sequential(
             nn.Linear(2 * fusionSize, self.embeddingSize[1]),
@@ -111,7 +111,7 @@ class Encoder(nn.Module):
             self.cnv1Ddaily(cnnInput),
             self.cnv1Dweekly(cnnInput),
             self.cnv1Dmonthly(cnnInput),
-            self.rnn(rnnInput)[0].transpose(-1, -2),
+            self.rnn(rnnInput)[1].transpose(-2,-3).transpose(-1,-2),
         ]
 
         cnnFusion = torch.concat(features[0:3], dim=2)
