@@ -123,7 +123,7 @@ if __name__ == "__main__":
         exit()
 
     # make dataLoader
-    traindataset = stockDataset(args.code, args.price, True)
+    traindataset = stockDataset(args.code, args.price, True, term=(0, 50))
     traindataLoader = DataLoader(
         traindataset,
         batch_size=args.batchSize,
@@ -143,8 +143,41 @@ if __name__ == "__main__":
     model = Hoynet(dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize)
     lossFn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+
+    epoch = args.epochs // 3
+
     # training
-    for t in range(args.epochs):
+    for t in range(0, epoch):
+        print(f"Epoch {t+1}\n-------------------------------")
+        train(traindataLoader, model, lossFn, optimizer, t)
+        # test(test_dataloader, model, loss_fn)
+        if t % 5 == 0:
+            path = "./checkpoints/hoynet_" + str(t) + ".pth"
+            torch.save(model.state_dict(), path)
+
+    traindataset = stockDataset(args.code, args.price, True, term=(50, 100))
+    traindataLoader = DataLoader(
+        traindataset,
+        batch_size=args.batchSize,
+        shuffle=True,
+    )
+    # training
+    for t in range(epoch, epoch * 2):
+        print(f"Epoch {t+1}\n-------------------------------")
+        train(traindataLoader, model, lossFn, optimizer, t)
+        # test(test_dataloader, model, loss_fn)
+        if t % 5 == 0:
+            path = "./checkpoints/hoynet_" + str(t) + ".pth"
+            torch.save(model.state_dict(), path)
+
+    traindataset = stockDataset(args.code, args.price, True, term=(100, 150))
+    traindataLoader = DataLoader(
+        traindataset,
+        batch_size=args.batchSize,
+        shuffle=True,
+    )
+    # training
+    for t in range(epoch * 2, epoch * 3):
         print(f"Epoch {t+1}\n-------------------------------")
         train(traindataLoader, model, lossFn, optimizer, t)
         # test(test_dataloader, model, loss_fn)

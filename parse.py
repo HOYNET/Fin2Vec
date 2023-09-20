@@ -3,7 +3,13 @@ from torch.utils.data import Dataset
 
 
 class stockDataset(Dataset):
-    def __init__(self, codeFilePath, priceFilePath, cp949=True):
+    def __init__(
+        self,
+        codeFilePath,
+        priceFilePath,
+        cp949=True,
+        term: (int, int) = None,
+    ):
         self.rawCode: pd.DataFrame = (
             pd.read_csv(codeFilePath, encoding="CP949")
             if cp949
@@ -12,6 +18,7 @@ class stockDataset(Dataset):
         self.rawPrice: pd.DataFrame = pd.read_csv(priceFilePath)
         self.stockCode: pd.Series = self.rawCode["tck_iem_cd"]
         self.columns = self.rawPrice.columns.drop(labels=["trd_dt", "tck_iem_cd"])
+        self.term = term
 
     def __len__(self):
         return len(self.stockCode)
@@ -31,5 +38,7 @@ class stockDataset(Dataset):
             ],
             inplace=True,
         )
+        if self.term:
+            data = data.iloc[self.term[0] : self.term[1]]
         data = data.to_numpy().transpose((1, 0))
         return {"data": data, "label": data}

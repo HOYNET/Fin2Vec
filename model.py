@@ -77,12 +77,12 @@ class Encoder(nn.Module):
                 padding=9,
                 padding_mode="replicate",
             ),
-            nn.AvgPool1d(kernel_size=160, stride=1),
+            nn.AvgPool1d(kernel_size=self.dates, stride=1),
         )
         self.cnv1DdailySize, self.cnv1DweeklySize, self.cnv1DmonthlySize = (
             self.dates - 4,
             self.dates - 19,
-            self.dates - 140,
+            20,
         )
         self.cnnFusion = nn.Linear(
             self.cnv1DdailySize + self.cnv1DweeklySize + self.cnv1DmonthlySize,
