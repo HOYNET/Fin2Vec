@@ -41,7 +41,6 @@ def train(dataloader, model, loss_fn, optimizer, epochs: int):
                 pred[0].detach().numpy(),
                 epochs,
                 i,
-                ["gts_iem_ong_pr", "gts_iem_hi_pr", "gts_iem_low_pr"],
             )
 
 
@@ -107,6 +106,14 @@ parser.add_argument(
     type=lambda x: tuple(map(int, x.split(","))),
     help="Size of Embedding.",
 )
+parser.add_argument(
+    "-t",
+    "--term",
+    metavar="size",
+    dest="term",
+    type=int,
+    help="Size of term.",
+)
 
 if __name__ == "__main__":
     # parse arguments
@@ -118,12 +125,15 @@ if __name__ == "__main__":
         or args.epochs is None
         or args.lr is None
         or args.embeddingSize is None
+        or args.term is None
     ):
         print("Missing options ...")
         exit()
 
+    term = args.term
+    epoch = args.epochs
     # make dataLoader
-    traindataset = stockDataset(args.code, args.price, True, term=(0, 50))
+    traindataset = stockDataset(args.code, args.price, True, term=(0, term))
     traindataLoader = DataLoader(
         traindataset,
         batch_size=args.batchSize,
@@ -144,43 +154,18 @@ if __name__ == "__main__":
     lossFn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    epoch = args.epochs // 3
-
     # training
-    for t in range(0, epoch):
-        print(f"Epoch {t+1}\n-------------------------------")
-        train(traindataLoader, model, lossFn, optimizer, t)
-        # test(test_dataloader, model, loss_fn)
-        if t % 5 == 0:
-            path = "./checkpoints/hoynet_" + str(t) + ".pth"
-            torch.save(model.state_dict(), path)
-
-    traindataset = stockDataset(args.code, args.price, True, term=(50, 100))
-    traindataLoader = DataLoader(
-        traindataset,
-        batch_size=args.batchSize,
-        shuffle=True,
-    )
-    # training
-    for t in range(epoch, epoch * 2):
-        print(f"Epoch {t+1}\n-------------------------------")
-        train(traindataLoader, model, lossFn, optimizer, t)
-        # test(test_dataloader, model, loss_fn)
-        if t % 5 == 0:
-            path = "./checkpoints/hoynet_" + str(t) + ".pth"
-            torch.save(model.state_dict(), path)
-
-    traindataset = stockDataset(args.code, args.price, True, term=(100, 150))
-    traindataLoader = DataLoader(
-        traindataset,
-        batch_size=args.batchSize,
-        shuffle=True,
-    )
-    # training
-    for t in range(epoch * 2, epoch * 3):
-        print(f"Epoch {t+1}\n-------------------------------")
-        train(traindataLoader, model, lossFn, optimizer, t)
-        # test(test_dataloader, model, loss_fn)
-        if t % 5 == 0:
-            path = "./checkpoints/hoynet_" + str(t) + ".pth"
-            torch.save(model.state_dict(), path)
+    for d in range(0, 1590 - term, term):
+        traindataset = stockDataset(args.code, args.price, True, term=(d, d + term))
+        traindataLoader = DataLoader(
+            traindataset,
+            batch_size=args.batchSize,
+            shuffle=True,
+        )
+        for t in range(0, epoch):
+            print(f"Epoch {t+1}\n-------------------------------")
+            train(traindataLoader, model, lossFn, optimizer, t)
+            # test(test_dataloader, model, loss_fn)
+            if t % 5 == 0:
+                path = "./checkpoints/hoynet_" + str(d) + "-" + str(t) + ".pth"
+                torch.save(model.state_dict(), path)

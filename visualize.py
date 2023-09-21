@@ -5,7 +5,7 @@ import numpy as np
 matplotlib.use("TkAgg")
 
 
-def visualize(x: np.ndarray, pred: np.ndarray, epoch, batch, columns) -> None:
+def visualize(x: np.ndarray, pred: np.ndarray, epoch, batch) -> None:
     xShape, predShape = x.shape, pred.shape
     assert xShape == predShape
 
@@ -28,7 +28,6 @@ def visualize(x: np.ndarray, pred: np.ndarray, epoch, batch, columns) -> None:
             color="red",
             alpha=0.7,
         )
-        axs[i].set_title(columns[i])
         axs[i].set_xlabel("Time")
         axs[i].set_ylabel("Value")
         axs[i].legend()

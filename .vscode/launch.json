@@ -8,12 +8,14 @@
             "program": "training.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["-p","./data/NASDAQ_DT_FC_STK_QUT.csv",
+            "args": ["-p","./data/data_0.csv",
                     "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
                     "-b","30",
                     "-e","50",
                     "-l", "0.00001",
-                    "-s", "10,10"]
+                    "-s", "10,10",
+                    "-t", "100"
+                ]
         }
     ]
 }

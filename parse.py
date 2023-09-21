@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from torch.utils.data import Dataset
 
 
@@ -8,7 +9,7 @@ class stockDataset(Dataset):
         codeFilePath,
         priceFilePath,
         cp949=True,
-        term: (int, int) = None,
+        term: int = None,
     ):
         self.rawCode: pd.DataFrame = (
             pd.read_csv(codeFilePath, encoding="CP949")
@@ -16,29 +17,53 @@ class stockDataset(Dataset):
             else pd.read_csv(codeFilePath)
         )
         self.rawPrice: pd.DataFrame = pd.read_csv(priceFilePath)
-        self.stockCode: pd.Series = self.rawCode["tck_iem_cd"]
-        self.columns = self.rawPrice.columns.drop(labels=["trd_dt", "tck_iem_cd"])
+        self.rawPrice = self.rawPrice.drop(columns=["Unnamed: 0"])
+        self.stockCode: pd.Series = self.rawCode["tck_iem_cd"].str.strip()
         self.term = term
+        self.length = len(self.stockCode)
+
+        lengths = self.rawPrice.groupby("tck_iem_cd").size()
+        adjusted_lengths = (
+            (lengths - lengths % term)
+            .reindex(self.stockCode)
+            .fillna(0)
+            .astype(int)
+            .values
+        )
+        self.cache = np.column_stack(
+            (np.zeros_like(adjusted_lengths), adjusted_lengths)
+        )
+
+        valid_codes = self.cache[:, 1] >= self.term
+        self.stockCode = self.stockCode[valid_codes]
+        self.rawPrice = self.rawPrice[self.rawPrice["tck_iem_cd"].isin(self.stockCode)]
+        self.cache = self.cache[valid_codes]
+        self.length = len(self.stockCode)
 
     def __len__(self):
-        return len(self.stockCode)
+        return self.length
 
     def __getitem__(self, index):
         code: str = self.stockCode.iloc[index].strip()
         data: pd.DataFrame = self.rawPrice[self.rawPrice["tck_iem_cd"] == code].copy()
-        data["trd_dt"] = pd.to_datetime(data["trd_dt"], format="%Y%m%d")
+        data["trd_dt"] = pd.to_datetime(data["trd_dt"], format="%Y-%m-%d")
         data.set_index("trd_dt", inplace=True)
         data.drop(
+            # gts_iem_ong_pr,gts_iem_hi_pr,gts_iem_low_pr,gts_iem_end_pr,gts_acl_trd_qty
             columns=[
+                "gts_iem_ong_pr",
                 "tck_iem_cd",
-                "gts_sll_cns_sum_qty",
-                "gts_byn_cns_sum_qty",
-                "gts_acl_trd_qty",
                 "gts_iem_end_pr",
             ],
             inplace=True,
         )
         if self.term:
-            data = data.iloc[self.term[0] : self.term[1]]
+            current, maxidx = self.cache[index][0], self.cache[index][1]
+            current, maxidx = self.cache[index][0], self.cache[index][1]
+            if current >= maxidx:
+                current = 0
+            new = current + self.term
+            data = data.iloc[current:new]
+            self.cache[index][0] = new
         data = data.to_numpy().transpose((1, 0))
         return {"data": data, "label": data}
