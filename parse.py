@@ -59,11 +59,10 @@ class stockDataset(Dataset):
         )
         if self.term:
             current, maxidx = self.cache[index][0], self.cache[index][1]
-            current, maxidx = self.cache[index][0], self.cache[index][1]
-            if current >= maxidx:
-                current = 0
             new = current + self.term
+            if new > maxidx:
+                current, new = 0, self.term
             data = data.iloc[current:new]
             self.cache[index][0] = new
         data = data.to_numpy().transpose((1, 0))
-        return {"data": data, "label": data}
+        return {"data": data, "label": data[:2]}

@@ -9,7 +9,24 @@ from model import Hoynet
 device = torch.device("cpu")
 
 
-def train(dataloader, model, loss_fn, optimizer, epochs: int):
+def replace_nan_with_nearest(tensor: torch.tensor) -> torch.tensor:
+    if tensor.dim() > 1:
+        for i in range(tensor.size(1)):
+            replace_nan_with_nearest(tensor[:, i])
+        return tensor
+
+    isnan = torch.isnan(tensor)
+    while torch.any(isnan):
+        # nan 값 앞의 값으로 대체
+        shifted = torch.roll(isnan, 1, dims=0)
+        shifted[0] = False
+        tensor[isnan] = tensor[shifted]
+        isnan = torch.isnan(tensor)
+
+    return tensor
+
+
+def train(dataloader, model, loss_fn, optimizer, epochs: int) -> None:
     size = len(dataloader.dataset)
     for i, batch in enumerate(dataloader):
         x, y = batch["data"], batch["label"]
@@ -17,10 +34,11 @@ def train(dataloader, model, loss_fn, optimizer, epochs: int):
             dtype=torch.float32
         )
 
-        # normalization
-        # x = torch.layer_norm(x, normalized_shape=x.shape)
-        # y = torch.layer_norm(y, normalized_shape=y.shape)
-        # Max normalization
+        if torch.any(x.isnan()):
+            replace_nan_with_nearest(x)
+        if torch.any(y.isnan()):
+            replace_nan_with_nearest(y)
+
         xMax, yMax = x.max(dim=-1, keepdim=True)[0], y.max(dim=-1, keepdim=True)[0]
         x, y = x / xMax, y / yMax
 
@@ -35,16 +53,18 @@ def train(dataloader, model, loss_fn, optimizer, epochs: int):
         if i % 10 == 0:
             loss, current = loss.item(), (i + 1) * len(x)
             print(f"loss: {loss}  [{current:>5d}/{size:>5d}]")
-            x, pred = x * xMax, pred * yMax
+            y, pred = y * yMax, pred * yMax
             visualize(
-                x[0].detach().numpy(),
+                y[0].detach().numpy(),
+                # y[0].cpu().detach().numpy(),
                 pred[0].detach().numpy(),
+                # pred[0].cpu().detach().numpy(),
                 epochs,
                 i,
             )
 
 
-def test(dataloader, model, loss_fn):
+def test(dataloader, model, loss_fn) -> None:
     num_batches = len(dataloader)
     model.eval()
     test_loss = 0
@@ -133,7 +153,7 @@ if __name__ == "__main__":
     term = args.term
     epoch = args.epochs
     # make dataLoader
-    traindataset = stockDataset(args.code, args.price, True, term=(0, term))
+    traindataset = stockDataset(args.code, args.price, True, term=args.term)
     traindataLoader = DataLoader(
         traindataset,
         batch_size=args.batchSize,
@@ -141,31 +161,28 @@ if __name__ == "__main__":
     )
 
     # make model
-    dummy = next(iter(traindataLoader))["data"]
-    dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize = (
-        dummy.shape[-1],
-        dummy.shape[-2],
+    dummy = next(iter(traindataLoader))
+    dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize = (
+        dummy["data"].shape[-1],
+        dummy["data"].shape[-2],
+        dummy["label"].shape[-2],
         64,
         7,
         32,
         args.embeddingSize,
     )
-    model = Hoynet(dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize)
+    model = Hoynet(
+        dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize
+    )
+    if torch.cuda.is_available():
+        model.cuda()
     lossFn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     # training
-    for d in range(0, 1590 - term, term):
-        traindataset = stockDataset(args.code, args.price, True, term=(d, d + term))
-        traindataLoader = DataLoader(
-            traindataset,
-            batch_size=args.batchSize,
-            shuffle=True,
-        )
-        for t in range(0, epoch):
-            print(f"Epoch {t+1}\n-------------------------------")
-            train(traindataLoader, model, lossFn, optimizer, t)
-            # test(test_dataloader, model, loss_fn)
-            if t % 5 == 0:
-                path = "./checkpoints/hoynet_" + str(d) + "-" + str(t) + ".pth"
-                torch.save(model.state_dict(), path)
+    for t in range(0, epoch):
+        print(f"Epoch {t}\n-------------------------------")
+        train(traindataLoader, model, lossFn, optimizer, t)
+        # test(test_dataloader, model, loss_fn)
+        path = f"./checkpoints/hoynet_{t}.pth"
+        torch.save(model.state_dict(), path)

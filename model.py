@@ -152,7 +152,7 @@ class Decoder(nn.Module):
 
         self.cnv = nn.Sequential(
             nn.Conv1d(
-                in_channels=self.embeddingSize[0]*2,
+                in_channels=self.embeddingSize[0] * 2,
                 out_channels=64,
                 kernel_size=1,
                 stride=1,
@@ -182,6 +182,7 @@ class Hoynet(nn.Module):
         self,
         dates,
         inputSize,
+        outputSize,
         hiddenSize,
         layerSize,
         fusionSize,
@@ -191,7 +192,7 @@ class Hoynet(nn.Module):
         self.encoder = Encoder(
             dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize
         )
-        self.decoder = Decoder(dates, inputSize, embeddingSize)
+        self.decoder = Decoder(dates, outputSize, embeddingSize)
 
     def forward(self, x):
         result = self.encoder(x)
