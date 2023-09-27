@@ -17,7 +17,6 @@ def replace_nan_with_nearest(tensor: torch.tensor) -> torch.tensor:
 
     isnan = torch.isnan(tensor)
     while torch.any(isnan):
-        # nan 값 앞의 값으로 대체
         shifted = torch.roll(isnan, 1, dims=0)
         shifted[0] = False
         tensor[isnan] = tensor[shifted]
@@ -134,6 +133,14 @@ parser.add_argument(
     type=int,
     help="Size of term.",
 )
+parser.add_argument(
+    "-m",
+    "--modelPath",
+    metavar="size",
+    dest="model",
+    type=str,
+    help="Path of Saved Model(.pth).",
+)
 
 if __name__ == "__main__":
     # parse arguments
@@ -174,8 +181,9 @@ if __name__ == "__main__":
     model = Hoynet(
         dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize
     )
-    if torch.cuda.is_available():
-        model.cuda()
+    if args.model:
+        model.load_state_dict(torch.load(args.model, map_location=device))
+    model.to(device)
     lossFn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 

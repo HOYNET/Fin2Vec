@@ -23,13 +23,7 @@ class stockDataset(Dataset):
         self.length = len(self.stockCode)
 
         lengths = self.rawPrice.groupby("tck_iem_cd").size()
-        adjusted_lengths = (
-            (lengths - lengths % term)
-            .reindex(self.stockCode)
-            .fillna(0)
-            .astype(int)
-            .values
-        )
+        adjusted_lengths = lengths.reindex(self.stockCode).fillna(0).astype(int).values
         self.cache = np.column_stack(
             (np.zeros_like(adjusted_lengths), adjusted_lengths)
         )
@@ -58,11 +52,13 @@ class stockDataset(Dataset):
             inplace=True,
         )
         if self.term:
-            current, maxidx = self.cache[index][0], self.cache[index][1]
+            current, maxidx = (
+                np.random.randint(self.cache[index][1] - self.term + 1),
+                self.cache[index][1],
+            )
             new = current + self.term
             if new > maxidx:
                 current, new = 0, self.term
             data = data.iloc[current:new]
-            self.cache[index][0] = new
         data = data.to_numpy().transpose((1, 0))
         return {"data": data, "label": data[:2]}

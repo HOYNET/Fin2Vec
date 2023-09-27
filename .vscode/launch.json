@@ -11,10 +11,11 @@
             "args": ["-p","./data/data_0.csv",
                     "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
                     "-b","30",
-                    "-e","50",
-                    "-l", "0.00001",
+                    "-e","150",
+                    "-l", "0.0001",
                     "-s", "10,10",
-                    "-t", "800"
+                    "-t", "800",
+                    "-m", "/home/lhstar/SKKU/NHContest/checkpoints/hoynet_37.pth"
                 ]
         }
     ]
