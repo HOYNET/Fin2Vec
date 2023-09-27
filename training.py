@@ -1,27 +1,69 @@
 import argparse
+from visualize import visualize
 import torch
+from torch import nn
 from torch.utils.data import DataLoader
 from parse import stockDataset
+from model import Hoynet
+
+device = torch.device("cpu")
 
 
-def train(dataloader, model, loss_fn, optimizer):
+def replace_nan_with_nearest(tensor: torch.tensor) -> torch.tensor:
+    if tensor.dim() > 1:
+        for i in range(tensor.size(1)):
+            replace_nan_with_nearest(tensor[:, i])
+        return tensor
+
+    isnan = torch.isnan(tensor)
+    while torch.any(isnan):
+        shifted = torch.roll(isnan, 1, dims=0)
+        shifted[0] = False
+        tensor[isnan] = tensor[shifted]
+        isnan = torch.isnan(tensor)
+
+    return tensor
+
+
+def train(dataloader, model, loss_fn, optimizer, epochs: int) -> None:
     size = len(dataloader.dataset)
-    for batch, (X, y) in enumerate(dataloader):
-        # X, y = X.to(device), y.to(device)
+    for i, batch in enumerate(dataloader):
+        x, y = batch["data"], batch["label"]
+        x, y = x.to(device).to(dtype=torch.float32), y.to(device).to(
+            dtype=torch.float32
+        )
 
-        pred = model(X)
+        if torch.any(x.isnan()):
+            replace_nan_with_nearest(x)
+        if torch.any(y.isnan()):
+            replace_nan_with_nearest(y)
+
+        xMax, yMax = x.max(dim=-1, keepdim=True)[0], y.max(dim=-1, keepdim=True)[0]
+        x, y = x / xMax, y / yMax
+
+        # forward
+        pred = model(x)
         loss = loss_fn(pred, y)
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        if batch % 100 == 0:
-            loss, current = loss.item(), (batch + 1) * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        if i % 10 == 0:
+            loss, current = loss.item(), (i + 1) * len(x)
+            print(f"loss: {loss}  [{current:>5d}/{size:>5d}]")
+            y, pred = y * yMax, pred * yMax
+            visualize(
+                y[0].detach().numpy(),
+                # y[0].cpu().detach().numpy(),
+                pred[0].detach().numpy(),
+                # pred[0].cpu().detach().numpy(),
+                epochs,
+                i,
+            )
 
 
-def test(dataloader, model, loss_fn):
+def test(dataloader, model, loss_fn) -> None:
     num_batches = len(dataloader)
     model.eval()
     test_loss = 0
@@ -67,22 +109,88 @@ parser.add_argument(
     type=int,
     help="Size of Epoch.",
 )
+parser.add_argument(
+    "-l",
+    "--learningRate",
+    metavar="size",
+    dest="lr",
+    type=float,
+    help="Learning Rate.",
+)
+parser.add_argument(
+    "-s",
+    "--embeddingSize",
+    metavar="size",
+    dest="embeddingSize",
+    type=lambda x: tuple(map(int, x.split(","))),
+    help="Size of Embedding.",
+)
+parser.add_argument(
+    "-t",
+    "--term",
+    metavar="size",
+    dest="term",
+    type=int,
+    help="Size of term.",
+)
+parser.add_argument(
+    "-m",
+    "--modelPath",
+    metavar="size",
+    dest="model",
+    type=str,
+    help="Path of Saved Model(.pth).",
+)
 
 if __name__ == "__main__":
     # parse arguments
     args = parser.parse_args()
-    if args.code is None or args.price is None or args.batchSize is None or args.epochs:
+    if (
+        args.code is None
+        or args.price is None
+        or args.batchSize is None
+        or args.epochs is None
+        or args.lr is None
+        or args.embeddingSize is None
+        or args.term is None
+    ):
         print("Missing options ...")
         exit()
 
+    term = args.term
+    epoch = args.epochs
     # make dataLoader
-    traindataset = stockDataset(args.code, args.price, True)
-    traindataLoader = DataLoader(traindataset, batch_size=args.batchSize)
+    traindataset = stockDataset(args.code, args.price, True, term=args.term)
+    traindataLoader = DataLoader(
+        traindataset,
+        batch_size=args.batchSize,
+        shuffle=True,
+    )
 
     # make model
+    dummy = next(iter(traindataLoader))
+    dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize = (
+        dummy["data"].shape[-1],
+        dummy["data"].shape[-2],
+        dummy["label"].shape[-2],
+        64,
+        7,
+        32,
+        args.embeddingSize,
+    )
+    model = Hoynet(
+        dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize
+    )
+    if args.model:
+        model.load_state_dict(torch.load(args.model, map_location=device))
+    model.to(device)
+    lossFn = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     # training
-    for t in range(args.epochs):
-        print(f"Epoch {t+1}\n-------------------------------")
-        # train(train_dataloader, model, loss_fn, optimizer)
+    for t in range(0, epoch):
+        print(f"Epoch {t}\n-------------------------------")
+        train(traindataLoader, model, lossFn, optimizer, t)
         # test(test_dataloader, model, loss_fn)
+        path = f"./checkpoints/hoynet_{t}.pth"
+        torch.save(model.state_dict(), path)

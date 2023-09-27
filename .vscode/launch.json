@@ -8,7 +8,15 @@
             "program": "training.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["-p","./data/NASDAQ_DT_FC_STK_QUT.csv","-c","./data/NASDAQ_FC_STK_IEM_IFO.csv"]
+            "args": ["-p","./data/data_0.csv",
+                    "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
+                    "-b","30",
+                    "-e","150",
+                    "-l", "0.0001",
+                    "-s", "10,10",
+                    "-t", "800",
+                    "-m", "/home/lhstar/SKKU/NHContest/checkpoints/hoynet_37.pth"
+                ]
         }
     ]
 }

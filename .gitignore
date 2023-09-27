@@ -1,2 +1,7 @@
 *.csv
 ./data/*
+*.png
+*.pth
+*.pyc
+*.zip
+checkpoints*
