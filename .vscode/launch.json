@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: training.py",
+            "name": "Python: training.py 0",
             "type": "python",
             "request": "launch",
             "program": "training.py",
@@ -17,6 +17,20 @@
                     "-t", "800",
                     "-m", "/home/lhstar/SKKU/NHContest/checkpoints/hoynet_37.pth"
                 ]
+        },{
+            "name": "Python: training.py 1",
+            "type": "python",
+            "request": "launch",
+            "program": "training.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["-p","./data/data_0.csv",
+                    "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
+                    "-b","30",
+                    "-e","150",
+                    "-l", "0.000001",
+                    "-s", "3,3",
+                    "-t", "10"                ]
         }
     ]
 }
