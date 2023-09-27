@@ -233,6 +233,5 @@ if __name__ == "__main__":
         print(f"Epoch {t}\n-------------------------------")
         train(traindataLoader, model, lossFn, optimizer, t)
         test(testdataLoader, model, lossFn)
-        # test(test_dataloader, model, loss_fn)
         path = f"./checkpoints/hoynet_{t}.pth"
         torch.save(model.state_dict(), path)
