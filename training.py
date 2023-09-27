@@ -2,11 +2,11 @@ import argparse
 from visualize import visualize
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from parse import stockDataset
 from model import Hoynet
 
-device = torch.device("cpu")
+device = torch.device("cuda")
 
 
 def replace_nan_with_nearest(tensor: torch.tensor) -> torch.tensor:
@@ -59,10 +59,8 @@ def train(dataloader, model, loss_fn, optimizer, epochs: int) -> None:
             print(f"loss: {loss}  [{current:>5d}/{size:>5d}]")
             y, pred = y * yMax, pred * yMax
             visualize(
-                y[0].detach().numpy(),
-                # y[0].cpu().detach().numpy(),
-                pred[0].detach().numpy(),
-                # pred[0].cpu().detach().numpy(),
+                y[0].cpu().detach().numpy(),
+                pred[0].cpu().detach().numpy(),
                 epochs,
                 i,
             )
@@ -73,10 +71,22 @@ def test(dataloader, model, loss_fn) -> None:
     model.eval()
     test_loss = 0
     with torch.no_grad():
-        for X, y in dataloader:
-            # X, y = X.to(device), y.to(device)
-            pred = model(X)
+        for i, batch in enumerate(dataloader):
+            x, y = batch["data"], batch["label"]
+            x, y = x.to(device).to(dtype=torch.float32), y.to(device).to(
+                dtype=torch.float32
+            )
+            xMax, yMax = x.max(dim=-1, keepdim=True)[0], y.max(dim=-1, keepdim=True)[0]
+            x, y = x / xMax, y / yMax
+            if torch.isnan(x).any():
+                replace_nan_with_nearest(x)
+            if torch.isnan(y).any():
+                replace_nan_with_nearest(y)
+
+            # forward
+            pred = model(x)
             test_loss += loss_fn(pred, y).item()
+    model.train()
     test_loss /= num_batches
     print(f"Test Error: \n Avg loss: {test_loss:>8f} \n")
 
@@ -146,6 +156,22 @@ parser.add_argument(
     type=str,
     help="Path of Saved Model(.pth).",
 )
+parser.add_argument(
+    "-n",
+    "--numWorkers",
+    metavar="size",
+    dest="numWorkers",
+    type=int,
+    help="numWorkers.",
+)
+parser.add_argument(
+    "-d",
+    "--device",
+    metavar="size",
+    dest="device",
+    type=str,
+    help="device.('cuda:0')",
+)
 
 if __name__ == "__main__":
     # parse arguments
@@ -163,12 +189,19 @@ if __name__ == "__main__":
     term = args.term
     epoch = args.epochs
     # make dataLoader
-    traindataset = stockDataset(args.code, args.price, True, term=args.term)
+    dataset = stockDataset(args.code, args.price, True, term=args.term)
+    trainLength = int(len(dataset) * 0.8)
+    traindataset, testdataset = random_split(
+        dataset, [trainLength, len(dataset) - trainLength]
+    )
     traindataLoader = DataLoader(
         traindataset,
         batch_size=args.batchSize,
         shuffle=True,
+        num_workers=args.numWorkers,
+        pin_memory=True,
     )
+    testdataLoader = DataLoader(testdataset, batch_size=args.batchSize, shuffle=True)
 
     # make model
     dummy = next(iter(traindataLoader))
@@ -185,8 +218,13 @@ if __name__ == "__main__":
         dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize
     )
     if args.model:
-        model.load_state_dict(torch.load(args.model, map_location=device))
+        model.load_state_dict(torch.load(args.model, map_location="cpu"))
+
+    assert args.device
+    device = torch.device(args.device)
+    assert torch.cuda.is_available()
     model.to(device)
+
     lossFn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -194,6 +232,7 @@ if __name__ == "__main__":
     for t in range(0, epoch):
         print(f"Epoch {t}\n-------------------------------")
         train(traindataLoader, model, lossFn, optimizer, t)
+        test(testdataLoader, model, lossFn)
         # test(test_dataloader, model, loss_fn)
         path = f"./checkpoints/hoynet_{t}.pth"
         torch.save(model.state_dict(), path)
