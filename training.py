@@ -11,11 +11,15 @@ device = torch.device("cpu")
 
 def replace_nan_with_nearest(tensor: torch.tensor) -> torch.tensor:
     if tensor.dim() > 1:
-        for i in range(tensor.size(1)):
-            replace_nan_with_nearest(tensor[:, i])
+        for i in range(tensor.size(0)):
+            tensor[i, :] = replace_nan_with_nearest(tensor[i, :])
         return tensor
 
     isnan = torch.isnan(tensor)
+    if torch.all(isnan):
+        tensor = tensor.zero_()
+        return tensor
+
     while torch.any(isnan):
         shifted = torch.roll(isnan, 1, dims=0)
         shifted[0] = False
@@ -33,16 +37,17 @@ def train(dataloader, model, loss_fn, optimizer, epochs: int) -> None:
             dtype=torch.float32
         )
 
-        if torch.any(x.isnan()):
-            replace_nan_with_nearest(x)
-        if torch.any(y.isnan()):
-            replace_nan_with_nearest(y)
-
         xMax, yMax = x.max(dim=-1, keepdim=True)[0], y.max(dim=-1, keepdim=True)[0]
         x, y = x / xMax, y / yMax
 
+        if torch.isnan(x).any():
+            replace_nan_with_nearest(x)
+        if torch.isnan(y).any():
+            replace_nan_with_nearest(y)
+
         # forward
         pred = model(x)
+        assert not torch.isnan(x).any()
         loss = loss_fn(pred, y)
 
         optimizer.zero_grad()
@@ -145,17 +150,15 @@ parser.add_argument(
 if __name__ == "__main__":
     # parse arguments
     args = parser.parse_args()
-    if (
-        args.code is None
-        or args.price is None
-        or args.batchSize is None
-        or args.epochs is None
-        or args.lr is None
-        or args.embeddingSize is None
-        or args.term is None
-    ):
-        print("Missing options ...")
-        exit()
+    assert (
+        args.code
+        and args.price
+        and args.batchSize
+        and args.epochs
+        and args.lr
+        and args.embeddingSize
+        and args.term
+    )
 
     term = args.term
     epoch = args.epochs

@@ -2,6 +2,15 @@ import torch
 from torch import nn
 
 
+def getKernelSize(dates: int) -> list[int]:
+    thrsh = (dates - 3) // 2
+    result: list[int] = [1]
+    while result[-1] < thrsh:
+        result.append(result[-1] * 5)
+    del result[-1]
+    return result
+
+
 class Encoder(nn.Module):
     def __init__(
         self,
@@ -19,73 +28,37 @@ class Encoder(nn.Module):
         self.layerSize = layerSize
         self.fusionSize = fusionSize
         self.embeddingSize = embeddingSize
-        self.cnv1Ddaily = nn.Sequential(
-            nn.Conv1d(
-                in_channels=inputSize,
-                out_channels=hiddenSize,
-                kernel_size=1,
-                stride=1,
-                padding=0,
-                padding_mode="replicate",
-            ),
-            nn.ReLU(inplace=True),
-            nn.Conv1d(
-                in_channels=hiddenSize,
-                out_channels=self.embeddingSize[0],
-                kernel_size=1,
-                stride=1,
-                padding=0,
-                padding_mode="replicate",
-            ),
-            nn.AvgPool1d(kernel_size=5, stride=1),
-        )
-        self.cnv1Dweekly = nn.Sequential(
-            nn.Conv1d(
-                in_channels=inputSize,
-                out_channels=hiddenSize,
-                kernel_size=5,
-                stride=1,
-                padding=2,
-                padding_mode="replicate",
-            ),
-            nn.ReLU(inplace=True),
-            nn.Conv1d(
-                in_channels=hiddenSize,
-                out_channels=self.embeddingSize[0],
-                kernel_size=5,
-                stride=1,
-                padding=2,
-                padding_mode="replicate",
-            ),
-            nn.AvgPool1d(kernel_size=20, stride=1),
-        )
-        self.cnv1Dmonthly = nn.Sequential(
-            nn.Conv1d(
-                in_channels=inputSize,
-                out_channels=hiddenSize,
-                kernel_size=11,
-                stride=1,
-                padding=10,
-                padding_mode="replicate",
-            ),
-            nn.ReLU(inplace=True),
-            nn.Conv1d(
-                in_channels=hiddenSize,
-                out_channels=self.embeddingSize[0],
-                kernel_size=10,
-                stride=1,
-                padding=9,
-                padding_mode="replicate",
-            ),
-            nn.AvgPool1d(kernel_size=self.dates, stride=1),
-        )
-        self.cnv1DdailySize, self.cnv1DweeklySize, self.cnv1DmonthlySize = (
-            self.dates - 4,
-            self.dates - 19,
-            20,
-        )
+
+        self.kernelSizes = getKernelSize(self.dates)
+        self.cnv1Ds: nn.ModuleList = nn.ModuleList()
+        self.cnv1DSizes: list[int] = []
+        for kernelSize in self.kernelSizes:
+            cnv: nn.Sequential = None
+            cnv = nn.Sequential(
+                nn.Conv1d(
+                    in_channels=inputSize,
+                    out_channels=hiddenSize,
+                    kernel_size=kernelSize,
+                    stride=1,
+                    padding=0,
+                    padding_mode="replicate",
+                ),
+                nn.ReLU(inplace=True),
+                nn.Conv1d(
+                    in_channels=hiddenSize,
+                    out_channels=self.embeddingSize[0],
+                    kernel_size=kernelSize,
+                    stride=1,
+                    padding=0,
+                    padding_mode="replicate",
+                ),
+                nn.AvgPool1d(kernel_size=5, stride=1),
+            )
+            self.cnv1Ds.append(cnv)
+            self.cnv1DSizes.append(self.dates - 2 * kernelSize - 2)
+
         self.cnnFusion = nn.Linear(
-            self.cnv1DdailySize + self.cnv1DweeklySize + self.cnv1DmonthlySize,
+            sum(self.cnv1DSizes),
             fusionSize,
         )
 
@@ -107,14 +80,10 @@ class Encoder(nn.Module):
     def forward(self, x):
         cnnInput = x
         rnnInput = x.transpose(-1, -2)
-        features = [
-            self.cnv1Ddaily(cnnInput),
-            self.cnv1Dweekly(cnnInput),
-            self.cnv1Dmonthly(cnnInput),
-            self.rnn(rnnInput)[1].transpose(-2, -3).transpose(-1, -2),
-        ]
+        features: list[torch.Tensor] = list(map(lambda m: m(cnnInput), self.cnv1Ds))
+        features.append(self.rnn(rnnInput)[1].transpose(-2, -3).transpose(-1, -2))
 
-        cnnFusion = torch.concat(features[0:3], dim=2)
+        cnnFusion = torch.concat(features[0:-1], dim=2)
         cnnFusion = self.cnnFusion(cnnFusion)
         rnnFusion = self.rnnFusion(features[-1])
 
