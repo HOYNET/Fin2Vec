@@ -164,12 +164,6 @@ class Hoynet(nn.Module):
         self.decoder = Decoder(dates, outputSize, embeddingSize)
 
     def forward(self, x):
-        if torch.isnan(x).any():
-            print("here")
         result = self.encoder(x)
-        if torch.isnan(result).any():
-            print("here")
         result = self.decoder(result)
-        if torch.isnan(result).any():
-            print("here")
         return result

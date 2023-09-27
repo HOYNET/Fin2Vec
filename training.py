@@ -47,10 +47,8 @@ def train(dataloader, model, loss_fn, optimizer, epochs: int) -> None:
 
         # forward
         pred = model(x)
+        assert not torch.isnan(x).any()
         loss = loss_fn(pred, y)
-
-        if torch.isnan(x).any() or torch.isnan(y).any() or torch.isnan(pred).any():
-            print("here nan")
 
         optimizer.zero_grad()
         loss.backward()
@@ -152,17 +150,15 @@ parser.add_argument(
 if __name__ == "__main__":
     # parse arguments
     args = parser.parse_args()
-    if (
-        args.code is None
-        or args.price is None
-        or args.batchSize is None
-        or args.epochs is None
-        or args.lr is None
-        or args.embeddingSize is None
-        or args.term is None
-    ):
-        print("Missing options ...")
-        exit()
+    assert (
+        args.code
+        and args.price
+        and args.batchSize
+        and args.epochs
+        and args.lr
+        and args.embeddingSize
+        and args.term
+    )
 
     term = args.term
     epoch = args.epochs
