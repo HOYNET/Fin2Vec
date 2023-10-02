@@ -8,29 +8,17 @@
             "program": "training.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["-p","./data/data_0.csv",
-                    "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
-                    "-b","30",
-                    "-e","150",
-                    "-l", "0.0001",
-                    "-s", "10,10",
-                    "-t", "800",
-                    "-m", "/home/lhstar/SKKU/NHContest/checkpoints/hoynet_37.pth"
+            "args": [
+                "-p","./data/data_2.csv",
+                "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
+                "-b","30",
+                "-e","150",
+                "-l", "0.0001",
+                "-s", "10,10",
+                "-t", "80",
+                "-i", "Open,High,Low,Close,Volume,gold,bond,dow",
+                "-o", "Close"
                 ]
-        },{
-            "name": "Python: training.py 1",
-            "type": "python",
-            "request": "launch",
-            "program": "training.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": ["-p","./data/data_0.csv",
-                    "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
-                    "-b","30",
-                    "-e","150",
-                    "-l", "0.000001",
-                    "-s", "3,3",
-                    "-t", "10"                ]
         }
     ]
 }

@@ -32,40 +32,29 @@ def replace_nan_with_nearest(tensor: torch.tensor) -> torch.tensor:
 def train(dataloader, model, loss_fn, optimizer, epochs: int) -> None:
     size = len(dataloader.dataset)
     for i, batch in enumerate(dataloader):
-        x, y = batch["data"], batch["label"]
-        x, y = x.to(device).to(dtype=torch.float32), y.to(device).to(
+        src, tgt = batch["src"], batch["tgt"]
+        src, tgt = src.to(device).to(dtype=torch.float32), tgt.to(device).to(
             dtype=torch.float32
         )
 
-        xMax, yMax = x.max(dim=-1, keepdim=True)[0], y.max(dim=-1, keepdim=True)[0]
-        x, y = x / xMax, y / yMax
+        xMax, yMax = src.max(dim=-1, keepdim=True)[0], tgt.max(dim=-1, keepdim=True)[0]
+        src, tgt = src / xMax, tgt / yMax
 
-        if torch.isnan(x).any():
-            replace_nan_with_nearest(x)
-        if torch.isnan(y).any():
-            replace_nan_with_nearest(y)
-
-        # forward
-        pred = model(x)
-        assert not torch.isnan(x).any()
-        loss = loss_fn(pred, y)
+        if torch.isnan(src).any():
+            replace_nan_with_nearest(src)
+        if torch.isnan(tgt).any():
+            replace_nan_with_nearest(tgt)
 
         optimizer.zero_grad()
+        pred = model(src.transpose(-1, -2), tgt[:, :, :-1].transpose(-1, -2))
+        assert not torch.isnan(pred).any()
+        loss = loss_fn(pred.transpose(-1, -2), tgt[:, :, 1:])
         loss.backward()
         optimizer.step()
 
         if i % 10 == 0:
-            loss, current = loss.item(), (i + 1) * len(x)
+            loss, current = loss.item(), (i + 1) * len(src)
             print(f"loss: {loss}  [{current:>5d}/{size:>5d}]")
-            y, pred = y * yMax, pred * yMax
-            visualize(
-                y[0].detach().numpy(),
-                # y[0].cpu().detach().numpy(),
-                pred[0].detach().numpy(),
-                # pred[0].cpu().detach().numpy(),
-                epochs,
-                i,
-            )
 
 
 def test(dataloader, model, loss_fn) -> None:
@@ -146,6 +135,22 @@ parser.add_argument(
     type=str,
     help="Path of Saved Model(.pth).",
 )
+parser.add_argument(
+    "-i",
+    "--inputFeatures",
+    metavar="size",
+    dest="inputs",
+    type=lambda x: x.split(","),
+    help="inputFeatures.",
+)
+parser.add_argument(
+    "-o",
+    "--outputFeatures",
+    metavar="size",
+    dest="outputs",
+    type=lambda x: x.split(","),
+    help="outputFeatures.",
+)
 
 if __name__ == "__main__":
     # parse arguments
@@ -158,12 +163,16 @@ if __name__ == "__main__":
         and args.lr
         and args.embeddingSize
         and args.term
+        and args.inputs
+        and args.outputs
     )
 
     term = args.term
     epoch = args.epochs
     # make dataLoader
-    traindataset = stockDataset(args.code, args.price, True, term=args.term)
+    traindataset = stockDataset(
+        args.code, args.price, args.inputs, args.outputs, 10, cp949=True, term=args.term
+    )
     traindataLoader = DataLoader(
         traindataset,
         batch_size=args.batchSize,
@@ -171,19 +180,8 @@ if __name__ == "__main__":
     )
 
     # make model
-    dummy = next(iter(traindataLoader))
-    dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize = (
-        dummy["data"].shape[-1],
-        dummy["data"].shape[-2],
-        dummy["label"].shape[-2],
-        64,
-        7,
-        32,
-        args.embeddingSize,
-    )
-    model = Hoynet(
-        dates, inputSize, outputSize, hiddenSize, layerSize, fusionSize, embeddingSize
-    )
+
+    model = Hoynet(len(args.inputs), 64, 8, 7, 0.1, len(args.outputs), device)
     if args.model:
         model.load_state_dict(torch.load(args.model, map_location=device))
     model.to(device)

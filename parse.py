@@ -8,6 +8,9 @@ class stockDataset(Dataset):
         self,
         codeFilePath,
         priceFilePath,
+        inputFeatures: list,
+        outputFeatures: list,
+        futures: int,
         cp949=True,
         term: int = None,
     ):
@@ -19,8 +22,11 @@ class stockDataset(Dataset):
         self.rawPrice: pd.DataFrame = pd.read_csv(priceFilePath)
         self.rawPrice = self.rawPrice.drop(columns=["Unnamed: 0"])
         self.stockCode: pd.Series = self.rawCode["tck_iem_cd"].str.strip()
-        self.term = term
         self.length = len(self.stockCode)
+
+        self.futures = futures
+        self.term = term
+        assert self.futures < self.term
 
         lengths = self.rawPrice.groupby("tck_iem_cd").size()
         adjusted_lengths = lengths.reindex(self.stockCode).fillna(0).astype(int).values
@@ -34,23 +40,20 @@ class stockDataset(Dataset):
         self.cache = self.cache[valid_codes]
         self.length = len(self.stockCode)
 
+        self.inputs = inputFeatures
+        self.outputs = outputFeatures
+
     def __len__(self):
         return self.length
 
     def __getitem__(self, index):
         code: str = self.stockCode.iloc[index].strip()
         data: pd.DataFrame = self.rawPrice[self.rawPrice["tck_iem_cd"] == code].copy()
-        data["trd_dt"] = pd.to_datetime(data["trd_dt"], format="%Y-%m-%d")
-        data.set_index("trd_dt", inplace=True)
-        data.drop(
-            # gts_iem_ong_pr,gts_iem_hi_pr,gts_iem_low_pr,gts_iem_end_pr,gts_acl_trd_qty
-            columns=[
-                "gts_iem_ong_pr",
-                "tck_iem_cd",
-                "gts_iem_end_pr",
-            ],
-            inplace=True,
-        )
+        data["Date"] = pd.to_datetime(data["Date"], format="%Y-%m-%d")
+        data.set_index("Date", inplace=True)
+
+        src = data[self.inputs]
+        tgt = data[self.outputs]
         if self.term:
             current, maxidx = (
                 np.random.randint(self.cache[index][1] - self.term + 1),
@@ -59,6 +62,9 @@ class stockDataset(Dataset):
             new = current + self.term
             if new > maxidx:
                 current, new = 0, self.term
-            data = data.iloc[current:new]
-        data = data.to_numpy().transpose((1, 0))
-        return {"data": data, "label": data[:2]}
+            src = src.iloc[current : new - self.futures]
+            tgt = tgt.iloc[new - self.futures : new]
+        src = src.to_numpy().transpose((1, 0))
+        tgt = tgt.to_numpy().transpose((1, 0))
+
+        return {"src": src, "tgt": tgt}
