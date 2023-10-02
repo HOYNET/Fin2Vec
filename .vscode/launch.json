@@ -24,13 +24,14 @@
             "program": "training.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["-p","./data/data_0.csv",
+            "args": ["-p","./data/data_1.csv",
                     "-c","./data/NASDAQ_FC_STK_IEM_IFO.csv",
                     "-b","30",
                     "-e","150",
                     "-l", "0.000001",
                     "-s", "3,3",
-                    "-t", "10"                ]
+                    "-t", "10"
+                ]
         }
     ]
 }
