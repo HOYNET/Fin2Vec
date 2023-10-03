@@ -15,39 +15,36 @@ parser.add_argument(
     help="Path of Price File.",
 )
 parser.add_argument(
-    "-c",
-    "--codeFile",
+    "-i",
+    "--infoFile",
     metavar="path",
     dest="code",
     type=str,
     help="Path of Code Info File.",
 )
 parser.add_argument(
-    "-b",
-    "--batchSize",
+    "--batches",
     metavar="size",
-    dest="batchSize",
+    dest="batches",
     type=int,
     help="Size of Batch.",
 )
 parser.add_argument(
-    "-e",
-    "--epochSize",
+    "--epochs",
     metavar="size",
     dest="epochs",
     type=int,
     help="Size of Epoch.",
 )
 parser.add_argument(
-    "-l",
-    "--learningRate",
+    "--lr",
     metavar="size",
     dest="lr",
     type=float,
     help="Learning Rate.",
 )
 parser.add_argument(
-    "-s",
+    "-e",
     "--embeddingSize",
     metavar="size",
     dest="embeddingSize",
@@ -55,7 +52,6 @@ parser.add_argument(
     help="Size of Embedding.",
 )
 parser.add_argument(
-    "-t",
     "--term",
     metavar="size",
     dest="term",
@@ -71,20 +67,36 @@ parser.add_argument(
     help="Path of Saved Model(.pth).",
 )
 parser.add_argument(
-    "-i",
-    "--inputFeatures",
+    "-s",
+    "--sourceFeatures",
     metavar="size",
     dest="inputs",
     type=lambda x: x.split(","),
     help="inputFeatures.",
 )
 parser.add_argument(
-    "-o",
-    "--outputFeatures",
+    "-t",
+    "--targetFeatures",
     metavar="size",
     dest="outputs",
     type=lambda x: x.split(","),
     help="outputFeatures.",
+)
+parser.add_argument(
+    "-d",
+    "--device",
+    metavar="size",
+    dest="device",
+    type=str,
+    help="device.('cuda:0')",
+)
+parser.add_argument(
+    "-c",
+    "--checkpointsPth",
+    metavar="size",
+    dest="ckpt",
+    type=str,
+    help="path to save checkpoints",
 )
 
 if __name__ == "__main__":
@@ -93,7 +105,7 @@ if __name__ == "__main__":
     assert (
         args.code
         and args.price
-        and args.batchSize
+        and args.batches
         and args.epochs
         and args.lr
         and args.embeddingSize
@@ -101,9 +113,12 @@ if __name__ == "__main__":
         and args.inputs
         and args.outputs
     )
-    
+
     # define device
-    device = torch.device("cpu")
+    if args.device:
+        device = torch.device(args.device)
+    else:
+        device = torch.device("cpu")
 
     # import dataset
     dataset = StockDataset(
@@ -119,4 +134,7 @@ if __name__ == "__main__":
     # make trainer
     lossFn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    trainer = Trainer(model, dataset, args.batchSize, 0.8, optimizer, device, lossFn)
+    trainer = Trainer(model, dataset, args.batches, 0.8, optimizer, device, lossFn)
+
+    # train
+    trainer(args.epochs, args.ckpt)

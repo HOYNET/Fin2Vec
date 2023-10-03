@@ -31,17 +31,17 @@ class Trainer:
         self.trainLength, self.testLength = len(self.trainLoader.dataset), len(
             self.testLoader.dataset
         )
-        
+
         self.optimizer = optimizer
         self.lossFn = lossFn
         self.device = device
 
-    def train(self, epochs: int, savingPth: str = None) -> None:
+    def __call__(self, epochs: int, savingPth: str = None) -> None:
         for t in range(epochs):
-            print(f"Epoch {t}\n-------------------------------", end=" ")
+            print(f"Epoch {t} ", end=" ")
             trainLoss = self.step()
             testLoss = self.test()
-            print(f"Avg Train Loss : {trainLoss} Avg Test Loss : {testLoss}")
+            print(f" Avg Train Loss : {trainLoss} Avg Test Loss : {testLoss}")
             if savingPth:
                 path = f"{savingPth}/hoynet_{t}.pth"
                 torch.save(self.model.state_dict(), path)
@@ -51,21 +51,11 @@ class Trainer:
         trainLoss = 0
 
         for batch in self.trainLoader:
-            src, tgt = batch["src"], batch["tgt"]
-            src, tgt = src.to(self.device).to(dtype=torch.float32), tgt.to(
-                self.device
-            ).to(dtype=torch.float32)
-
-            xMax, yMax = (
-                src.max(dim=-1, keepdim=True)[0],
-                tgt.max(dim=-1, keepdim=True)[0],
-            )
-            src, tgt = src / xMax, tgt / yMax
-
-            if torch.isnan(src).any():
-                self.replace_nan_with_nearest(src)
-            if torch.isnan(tgt).any():
-                self.replace_nan_with_nearest(tgt)
+            print("#", end="")
+            src, tgt = batch["src"].to(self.device).to(dtype=torch.float32), batch[
+                "tgt"
+            ].to(self.device).to(dtype=torch.float32)
+            src, tgt = self.maxPreProc(src), self.maxPreProc(tgt)
 
             self.optimizer.zero_grad()
             pred = self.model(src.transpose(-1, -2), tgt[:, :, :-1].transpose(-1, -2))
@@ -84,25 +74,26 @@ class Trainer:
 
         with torch.no_grad():
             for batch in self.testLoader:
-                src, tgt = batch["src"], batch["tgt"]
-                src, tgt = src.to(self.device).to(dtype=torch.float32), tgt.to(
-                    self.device
-                ).to(dtype=torch.float32)
-                xMax, yMax = (
-                    src.max(dim=-1, keepdim=True)[0],
-                    tgt.max(dim=-1, keepdim=True)[0],
-                )
-                src, tgt = src / xMax, tgt / yMax
-                if torch.isnan(src).any():
-                    self.replace_nan_with_nearest(src)
-                if torch.isnan(tgt).any():
-                    self.replace_nan_with_nearest(tgt)
+                print("#", end="")
+                src, tgt = batch["src"].to(self.device).to(dtype=torch.float32), batch[
+                    "tgt"
+                ].to(self.device).to(dtype=torch.float32)
+                src, tgt = self.maxPreProc(src), self.maxPreProc(tgt)
 
                 pred = self.model(src)
                 test_loss += self.lossFn(pred, tgt).item()
 
         test_loss /= self.testLength
         return test_loss
+
+    def maxPreProc(self, tensor: torch.tensor) -> torch.tensor:
+        max = tensor.max(dim=-1, keepdim=True)[0]
+        tensor /= max
+
+        if torch.isnan(tensor).any():
+            self.replace_nan_with_nearest(tensor)
+
+        return tensor
 
     def replace_nan_with_nearest(self, tensor: torch.tensor) -> torch.tensor:
         if tensor.dim() > 1:
