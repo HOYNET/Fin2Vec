@@ -1,44 +1,42 @@
-from visualize import visualize
 import torch
 from torch import nn
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader, random_split
 
 
-class trainer:
+class Trainer:
     def __init__(
         self,
         model: nn.Module,
         dataset: Dataset,
         batches: int,
         trainRate: float,
+        optimizer: torch.optim.Optimizer,
+        device: torch.device,
         lossFn,
-        device,
     ):
         self.model = model
         self.model.to(device)
 
-        assert trainRate < 1 and trainRate > 0
+        assert trainRate and trainRate < 1 and trainRate > 0
         trainLength = int(len(dataset) * trainRate)
         traindataset, testdataset = random_split(
             dataset, [trainLength, len(dataset) - trainLength]
         )
-        self.trainLoader = DataLoader(
+        self.trainLoader, self.testLoader = DataLoader(
             traindataset,
             batch_size=batches,
             shuffle=True,
+        ), DataLoader(testdataset, batch_size=batches, shuffle=True)
+        self.trainLength, self.testLength = len(self.trainLoader.dataset), len(
+            self.testLoader.dataset
         )
-        self.testLoader = DataLoader(testdataset, batch_size=batches, shuffle=True)
-
+        
+        self.optimizer = optimizer
         self.lossFn = lossFn
         self.device = device
 
-        self.optimizer: torch.optim.Optimizer = None
-
-    def train(
-        self, optimizer: torch.optim.Optimizer, epochs: int, savingPth: str = None
-    ) -> None:
-        self.optimizer = optimizer
+    def train(self, epochs: int, savingPth: str = None) -> None:
         for t in range(epochs):
             print(f"Epoch {t}\n-------------------------------", end=" ")
             trainLoss = self.step()
@@ -49,8 +47,9 @@ class trainer:
                 torch.save(self.model.state_dict(), path)
 
     def step(self) -> float:
-        size = len(self.trainLoader.dataset)
+        self.model.train()
         trainLoss = 0
+
         for batch in self.trainLoader:
             src, tgt = batch["src"], batch["tgt"]
             src, tgt = src.to(self.device).to(dtype=torch.float32), tgt.to(
@@ -76,19 +75,33 @@ class trainer:
             self.optimizer.step()
             trainLoss += loss.item()
 
-        trainLoss /= size
+        trainLoss /= self.trainLength
         return trainLoss
 
     def test(self) -> float:
-        num_batches = len(self.testLoader)
         self.model.eval()
         test_loss = 0
+
         with torch.no_grad():
-            for X, y in self.trainLoader:
-                # X, y = X.to(device), y.to(device)
-                pred = self.model(X)
-                test_loss += self.lossFn(pred, y).item()
-        test_loss /= num_batches
+            for batch in self.testLoader:
+                src, tgt = batch["src"], batch["tgt"]
+                src, tgt = src.to(self.device).to(dtype=torch.float32), tgt.to(
+                    self.device
+                ).to(dtype=torch.float32)
+                xMax, yMax = (
+                    src.max(dim=-1, keepdim=True)[0],
+                    tgt.max(dim=-1, keepdim=True)[0],
+                )
+                src, tgt = src / xMax, tgt / yMax
+                if torch.isnan(src).any():
+                    self.replace_nan_with_nearest(src)
+                if torch.isnan(tgt).any():
+                    self.replace_nan_with_nearest(tgt)
+
+                pred = self.model(src)
+                test_loss += self.lossFn(pred, tgt).item()
+
+        test_loss /= self.testLength
         return test_loss
 
     def replace_nan_with_nearest(self, tensor: torch.tensor) -> torch.tensor:

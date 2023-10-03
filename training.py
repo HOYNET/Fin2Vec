@@ -1,12 +1,9 @@
 import argparse
-from visualize import visualize
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
-from parse import stockDataset
+from parse import StockDataset
 from model import Hoynet
-
-device = torch.device("cpu")
+from trainer import Trainer
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
 parser.add_argument(
@@ -104,32 +101,22 @@ if __name__ == "__main__":
         and args.inputs
         and args.outputs
     )
+    
+    # define device
+    device = torch.device("cpu")
 
-    term = args.term
-    epoch = args.epochs
-    # make dataLoader
-    traindataset = stockDataset(
+    # import dataset
+    dataset = StockDataset(
         args.code, args.price, args.inputs, args.outputs, 10, cp949=True, term=args.term
-    )
-    traindataLoader = DataLoader(
-        traindataset,
-        batch_size=args.batchSize,
-        shuffle=True,
     )
 
     # make model
-
     model = Hoynet(len(args.inputs), 64, 8, 7, 0.1, len(args.outputs), device)
     if args.model:
         model.load_state_dict(torch.load(args.model, map_location=device))
     model.to(device)
+
+    # make trainer
     lossFn = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-
-    # training
-    for t in range(0, epoch):
-        print(f"Epoch {t}\n-------------------------------")
-        train(traindataLoader, model, lossFn, optimizer, t)
-        # test(test_dataloader, model, loss_fn)
-        path = f"./checkpoints/hoynet_{t}.pth"
-        torch.save(model.state_dict(), path)
+    trainer = Trainer(model, dataset, args.batchSize, 0.8, optimizer, device, lossFn)

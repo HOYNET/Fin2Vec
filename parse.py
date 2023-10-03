@@ -3,7 +3,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class stockDataset(Dataset):
+class StockDataset(Dataset):
     def __init__(
         self,
         codeFilePath,
