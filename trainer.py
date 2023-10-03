@@ -41,7 +41,7 @@ class Trainer:
             print(f"Epoch {t} ", end=" ")
             trainLoss = self.step()
             testLoss = self.test()
-            print(f" Avg Train Loss : {trainLoss} Avg Test Loss : {testLoss}")
+            print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
             if savingPth:
                 path = f"{savingPth}/hoynet_{t}.pth"
                 torch.save(self.model.state_dict(), path)
@@ -80,8 +80,11 @@ class Trainer:
                 ].to(self.device).to(dtype=torch.float32)
                 src, tgt = self.maxPreProc(src), self.maxPreProc(tgt)
 
-                pred = self.model(src)
-                test_loss += self.lossFn(pred, tgt).item()
+                pred = self.model(
+                    src.transpose(-1, -2), tgt[:, :, :-1].transpose(-1, -2)
+                )
+                assert not torch.isnan(pred).any()
+                test_loss += self.lossFn(pred.transpose(-1, -2), tgt[:, :, 1:])
 
         test_loss /= self.testLength
         return test_loss
