@@ -1,9 +1,7 @@
 import argparse
 import torch
 from torch import nn
-from parse import StockDataset
-from model import Hoynet
-from trainer import Trainer
+from hoynet import StockDataset, Hoynet, Trainer
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
 parser.add_argument(
