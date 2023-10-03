@@ -8,68 +8,6 @@ from model import Hoynet
 
 device = torch.device("cpu")
 
-
-def replace_nan_with_nearest(tensor: torch.tensor) -> torch.tensor:
-    if tensor.dim() > 1:
-        for i in range(tensor.size(0)):
-            tensor[i, :] = replace_nan_with_nearest(tensor[i, :])
-        return tensor
-
-    isnan = torch.isnan(tensor)
-    if torch.all(isnan):
-        tensor = tensor.zero_()
-        return tensor
-
-    while torch.any(isnan):
-        shifted = torch.roll(isnan, 1, dims=0)
-        shifted[0] = False
-        tensor[isnan] = tensor[shifted]
-        isnan = torch.isnan(tensor)
-
-    return tensor
-
-
-def train(dataloader, model, loss_fn, optimizer, epochs: int) -> None:
-    size = len(dataloader.dataset)
-    for i, batch in enumerate(dataloader):
-        src, tgt = batch["src"], batch["tgt"]
-        src, tgt = src.to(device).to(dtype=torch.float32), tgt.to(device).to(
-            dtype=torch.float32
-        )
-
-        xMax, yMax = src.max(dim=-1, keepdim=True)[0], tgt.max(dim=-1, keepdim=True)[0]
-        src, tgt = src / xMax, tgt / yMax
-
-        if torch.isnan(src).any():
-            replace_nan_with_nearest(src)
-        if torch.isnan(tgt).any():
-            replace_nan_with_nearest(tgt)
-
-        optimizer.zero_grad()
-        pred = model(src.transpose(-1, -2), tgt[:, :, :-1].transpose(-1, -2))
-        assert not torch.isnan(pred).any()
-        loss = loss_fn(pred.transpose(-1, -2), tgt[:, :, 1:])
-        loss.backward()
-        optimizer.step()
-
-        if i % 10 == 0:
-            loss, current = loss.item(), (i + 1) * len(src)
-            print(f"loss: {loss}  [{current:>5d}/{size:>5d}]")
-
-
-def test(dataloader, model, loss_fn) -> None:
-    num_batches = len(dataloader)
-    model.eval()
-    test_loss = 0
-    with torch.no_grad():
-        for X, y in dataloader:
-            # X, y = X.to(device), y.to(device)
-            pred = model(X)
-            test_loss += loss_fn(pred, y).item()
-    test_loss /= num_batches
-    print(f"Test Error: \n Avg loss: {test_loss:>8f} \n")
-
-
 parser = argparse.ArgumentParser(description="Get Path of Files.")
 parser.add_argument(
     "-p",
