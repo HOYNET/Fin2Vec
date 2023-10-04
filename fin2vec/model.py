@@ -1,8 +1,9 @@
+import torch
 from torch import nn
 import math
 
 
-class Hoynet(nn.Module):
+class Fin2Vec(nn.Module):
     def __init__(
         self,
         encoder: nn.Module,
@@ -15,7 +16,7 @@ class Hoynet(nn.Module):
         dropout: float = 0.1,
         nlayers: int = 7,
     ):
-        super(Hoynet, self).__init__()
+        super(Fin2Vec, self).__init__()
         self.encoder = encoder
         self.d_model = d_model
 
@@ -28,14 +29,16 @@ class Hoynet(nn.Module):
             nn.ReLU(True),
             nn.TransformerEncoder(tfENCLayer, nlayers),
             nn.Linear(d_model, outputSize),
-            nn.ReLU(True)
+            nn.ReLU(True),
         )
 
         self.decoder = decoder
 
     def forward(self, src):
-        src = self.encoder(src) * math.sqrt(self.d_model)
+        with torch.no_grad():
+            src = self.encoder(src) * math.sqrt(self.d_model)
         result = self.tfEncoder(src)
         if self.decoder:
-            result = self.decoder(result)
+            with torch.no_grad():
+                result = self.decoder(result)
         return result

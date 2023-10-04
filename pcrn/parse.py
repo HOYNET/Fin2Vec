@@ -3,7 +3,7 @@ import numpy as np
 from torch.utils.data import Dataset
 
 
-class StockDataset(Dataset):
+class PCRNDataset(Dataset):
     def __init__(
         self,
         codeFilePath,
@@ -48,12 +48,12 @@ class StockDataset(Dataset):
 
     def __getitem__(self, index):
         code: str = self.stockCode.iloc[index].strip()
-        data: pd.DataFrame = self.rawPrice[self.rawPrice["tck_iem_cd"] == code].copy()
-        data["Date"] = pd.to_datetime(data["Date"], format="%Y-%m-%d")
-        data.set_index("Date", inplace=True)
+        raw: pd.DataFrame = self.rawPrice[self.rawPrice["tck_iem_cd"] == code].copy()
+        raw["Date"] = pd.to_datetime(raw["Date"], format="%Y-%m-%d")
+        raw.set_index("Date", inplace=True)
 
-        src = data[self.inputs]
-        tgt = data[self.outputs]
+        data = raw[self.inputs]
+        label = raw[self.outputs]
         if self.term:
             current, maxidx = (
                 np.random.randint(self.cache[index][1] - self.term + 1),
@@ -62,9 +62,9 @@ class StockDataset(Dataset):
             new = current + self.term
             if new > maxidx:
                 current, new = 0, self.term
-            src = src.iloc[current : new - self.futures]
-            tgt = tgt.iloc[new - self.futures : new]
-        src = src.to_numpy().transpose((1, 0))
-        tgt = tgt.to_numpy().transpose((1, 0))
+            data = data.iloc[current : new - self.futures]
+            label = label.iloc[new - self.futures : new]
+        data = data.to_numpy().transpose((1, 0))
+        label = label.to_numpy().transpose((1, 0))
 
-        return {"src": src, "tgt": tgt}
+        return {"data": data, "label": label}

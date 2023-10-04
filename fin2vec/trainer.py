@@ -1,14 +1,14 @@
 import torch
 from torch import nn
-from torch.utils.data import Dataset
+from .parse import Fin2VecDataset
 from torch.utils.data import DataLoader, random_split
 
 
-class Trainer:
+class Fin2VecTrainer:
     def __init__(
         self,
         model: nn.Module,
-        dataset: Dataset,
+        dataset: Fin2VecDataset,
         batches: int,
         trainRate: float,
         optimizer: torch.optim.Optimizer,

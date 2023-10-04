@@ -1,7 +1,7 @@
 import argparse
 import torch
 from torch import nn
-from hoynet import StockDataset, Hoynet, Trainer
+from pcrn import PCRN
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
 parser.add_argument(
@@ -123,11 +123,17 @@ if __name__ == "__main__":
         args.code, args.price, args.inputs, args.outputs, 10, cp949=True, term=args.term
     )
 
-    # make model
-    model = Hoynet(len(args.inputs), 64, 8, 7, 0.1, len(args.outputs), device)
+    # load encoder
+    encoder = PCRN(
+        args.term, 1, 1, 64, 7, 32, args.embeddingsize
+    )
     if args.model:
-        model.load_state_dict(torch.load(args.model, map_location=device))
-    model.to(device)
+        encoder.load_state_dict(torch.load(args.model, map_location=device))
+    encoder.to(device)
+    encoder.eval()
+
+    # make kospi2vec
+    model = Kospi2Vec(encoder, len(args.inputs))
 
     # make trainer
     lossFn = nn.MSELoss()
