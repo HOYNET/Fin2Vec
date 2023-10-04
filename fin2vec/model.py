@@ -3,6 +3,7 @@ from torch import nn
 import math
 
 
+# Finance to Vector
 class Fin2Vec(nn.Module):
     def __init__(
         self,

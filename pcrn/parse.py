@@ -10,7 +10,6 @@ class PCRNDataset(Dataset):
         priceFilePath,
         inputFeatures: list,
         outputFeatures: list,
-        futures: int,
         cp949=True,
         term: int = None,
     ):
@@ -24,9 +23,7 @@ class PCRNDataset(Dataset):
         self.stockCode: pd.Series = self.rawCode["tck_iem_cd"].str.strip()
         self.length = len(self.stockCode)
 
-        self.futures = futures
         self.term = term
-        assert self.futures < self.term
 
         lengths = self.rawPrice.groupby("tck_iem_cd").size()
         adjusted_lengths = lengths.reindex(self.stockCode).fillna(0).astype(int).values
@@ -62,8 +59,8 @@ class PCRNDataset(Dataset):
             new = current + self.term
             if new > maxidx:
                 current, new = 0, self.term
-            data = data.iloc[current : new - self.futures]
-            label = label.iloc[new - self.futures : new]
+            data = data.iloc[current : new]
+            label = label.iloc[current : new]
         data = data.to_numpy().transpose((1, 0))
         label = label.to_numpy().transpose((1, 0))
 

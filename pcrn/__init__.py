@@ -1,3 +1,3 @@
-from .model import PCRN
+from .model import PCRN, Config2PCRN
 from .trainer import PCRNTrainer
 from .parse import PCRNDataset
