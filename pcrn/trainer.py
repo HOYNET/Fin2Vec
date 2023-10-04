@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from .parse import PCRNDataset
 from torch.utils.data import DataLoader, random_split
+from torch.utils.tensorboard import SummaryWriter
 
 
 class PCRNTrainer:
@@ -34,24 +35,26 @@ class PCRNTrainer:
 
         self.optimizer = optimizer
         self.lossFn = lossFn
+        self.writer = SummaryWriter('runs/train_PCRN')
         self.device = device
 
     def __call__(self, epochs: int, savingPth: str = None) -> None:
         for t in range(epochs):
-            print(f"Epoch {t} ", end=" ")
-            trainLoss = self.step()
+            print(f"Epoch {t} ", end="")
+            trainLoss = self.step(t)
             testLoss = self.test()
+            self.writer.add_scalar('Loss/train_epoch', trainLoss, t)
+            self.writer.add_scalar('Loss/test_epoch', testLoss, t)
             print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
             if savingPth:
                 path = f"{savingPth}/hoynet_{t}.pth"
                 torch.save(self.model.state_dict(), path)
 
-    def step(self) -> float:
+    def step(self, epoch) -> float:
         self.model.train()
         trainLoss = 0
 
-        for batch in self.trainLoader:
-            print("#", end="")
+        for idx, batch in enumerate(self.trainLoader):
             data, label = batch["data"].to(self.device).to(dtype=torch.float32), batch[
                 "label"
             ].to(self.device).to(dtype=torch.float32)
@@ -64,6 +67,9 @@ class PCRNTrainer:
             loss.backward()
             self.optimizer.step()
             trainLoss += loss.item()
+            self.writer.add_scalar(
+                "Loss/train", loss.item(), epoch * len(self.trainLoader) + idx
+            )
 
         trainLoss /= self.trainLength
         return trainLoss
@@ -114,3 +120,6 @@ class PCRNTrainer:
             isnan = torch.isnan(tensor)
 
         return tensor
+
+    def __del__(self):
+        self.writer.close()
