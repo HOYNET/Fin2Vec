@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset
 from datetime import datetime
+from joblib import Parallel, delayed
 
 
 class Fin2VecDataset(Dataset):
@@ -26,43 +27,52 @@ class Fin2VecDataset(Dataset):
         else:
             self.range: (int, int) = (1, self.length)
         assert self.range[0] < self.range[1] and self.range[1] <= self.length
-        self.timeline = self.rawPrice["Date"].drop_duplicates()
+        self.timeline = np.array(
+            self.rawPrice["Date"].drop_duplicates(), dtype=np.datetime64
+        )
 
     def __len__(self):
         return self.length
 
     def __getitem__(self, index):
-        tgtCode = self.stockCode.iloc[index]
-        tgt = self.rawPrice[self.rawPrice["tck_iem_cd"] == tgtCode].copy()
-
-        minTime, maxTime = tgt["Date"].min(), tgt["Date"].max()
-        tgtTerm = (maxTime - minTime).days
-        timeline = self.timeline[self.timeline >= minTime]
-        timeline = timeline[timeline < maxTime]
+        minTime, maxTime, tgtTerm = (
+            self.minTimes[index],
+            self.maxTimes[index],
+            self.lengths[index],
+        )
+        timeline = self.timeline[(self.timeline >= minTime) & (self.timeline < maxTime)]
         tgtTerm = len(timeline)
         startIdx = np.random.randint(low=0, high=tgtTerm - self.term)
         endIdx = startIdx + self.term
-        startTime, endTime = timeline.iloc[startIdx], timeline.iloc[endIdx]
+        startTime, endTime = timeline[startIdx].astype(
+            self.rawPrice["Date"].dtype
+        ), timeline[endIdx].astype(self.rawPrice["Date"].dtype)
         rawData: pd.DataFrame = self.rawPrice.loc[
-            self.rawPrice["Date"] >= startTime, self.inputs
+            (self.rawPrice["Date"] >= startTime) & (self.rawPrice["Date"] < endTime),
+            self.inputs,
         ]
-        rawData = rawData[rawData["Date"] < endTime]
         codes, lengths = (
             rawData["tck_iem_cd"].drop_duplicates(),
             rawData.groupby("tck_iem_cd").size(),
         )
         lengths = lengths.reindex(codes).fillna(0).astype(int)
         codes = lengths[lengths == self.term].index
+
+        filtered_data = rawData[rawData["tck_iem_cd"].isin(codes)]
+        filtered_data = filtered_data.sort_values(by=["Date"], ascending=True)
         src = [
             pd.DataFrame(x[1])
             .sort_values(by=["Date"], ascending=True)
             .drop(columns=["Date", "tck_iem_cd"])
             .to_numpy()
             .transpose(-1, -2)
-            for x in rawData[rawData["tck_iem_cd"].isin(codes)].groupby("tck_iem_cd")
+            for x in filtered_data.groupby("tck_iem_cd")
         ]
+
         src = np.array(src)
         index = np.array(self.stockCode[self.stockCode.isin(codes)].index)
+        indices = np.random.permutation(len(src))
+        src, index, end = src[indices], index[indices], len(src)
         if len(src) != self.length:
             gap, shape = self.length - len(src), src.shape
             padsrc, padindex = (
@@ -73,7 +83,7 @@ class Fin2VecDataset(Dataset):
                 [index, padindex], axis=0
             )
 
-        return {"src": src, "index": index}
+        return {"src": src, "index": index, "end": end}
 
     def loadFromFile(self, codePath, pricePath, cp949):
         self.rawCode: pd.DataFrame = (
@@ -96,7 +106,21 @@ class Fin2VecDataset(Dataset):
     def termInspect(self, term):
         self.term, self.period = term, (self.endtime - self.starttime).days
         assert self.term < self.period
-        lengths = self.rawPrice.groupby("tck_iem_cd").size()
+        groups = self.rawPrice.groupby("tck_iem_cd")
+        self.minTimes = np.array(
+            [x[1]["Date"].min() for x in groups], dtype=np.datetime64
+        )
+        self.maxTimes = np.array(
+            [x[1]["Date"].max() for x in groups], dtype=np.datetime64
+        )
+        self.lengths = np.array(
+            [
+                (self.maxTimes[i] - self.minTimes[i]).astype(int)
+                for i in range(len(groups))
+            ],
+            dtype=np.int64,
+        )
+        lengths = groups.size()
         adjusted_lengths = lengths.reindex(self.stockCode).fillna(0).astype(int).values
         valid_codes = adjusted_lengths >= self.term
         self.stockCode = self.stockCode[valid_codes]
