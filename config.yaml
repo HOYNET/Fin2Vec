@@ -30,4 +30,17 @@ HoynetConfig:
           hiddens: 64
           nlayers: 7
           fusions: 32
-          embeddings: (10,10)
+          embeddings: 10,10
+      config:
+        ncodes:
+        outputs:
+        d_model:
+        nhead:
+        d_hid:
+        nlayers:
+      train:
+        epochs: 500
+        batches: 30
+        lr: 0.0001
+        eval: 0.2
+        ckpt: ./checkpoints

@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     models = yml["models"]
 
-    if models["pcrn"]:
+    if "pcrn" in models:
         pcrn = models["pcrn"]
         data, train, config = pcrn["data"], pcrn["train"], pcrn["config"]
 

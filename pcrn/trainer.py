@@ -43,7 +43,7 @@ class PCRNTrainer:
         for t in range(epochs):
             print(f"Epoch {t} ", end="")
             trainLoss = self.step(t)
-            testLoss = self.test()
+            testLoss = self.test(t)
             self.writer.add_scalar("Loss/train_epoch", trainLoss, t)
             self.writer.add_scalar("Loss/test_epoch", testLoss, t)
             print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
@@ -59,7 +59,8 @@ class PCRNTrainer:
             data, label = batch["data"].to(self.device).to(dtype=torch.float32), batch[
                 "label"
             ].to(self.device).to(dtype=torch.float32)
-            data, label = self.maxPreProc(data), self.maxPreProc(label)
+            data, dmax = self.maxPreProc(data)
+            label, lmax = self.maxPreProc(label)
 
             self.optimizer.zero_grad()
             pred = self.model(data)
@@ -71,26 +72,28 @@ class PCRNTrainer:
             self.writer.add_scalar(
                 "Loss/train", loss.item(), epoch * len(self.trainLoader) + idx
             )
-            self.visualize(pred, label, epoch * len(self.trainLoader) + idx)
 
         trainLoss /= self.trainLength
         return trainLoss
 
-    def test(self) -> float:
+    def test(self, epoch) -> float:
         self.model.eval()
         test_loss = 0
 
         with torch.no_grad():
-            for batch in self.testLoader:
-                print("#", end="")
+            for idx, batch in enumerate(self.testLoader):
                 data, label = batch["data"].to(self.device).to(
                     dtype=torch.float32
                 ), batch["label"].to(self.device).to(dtype=torch.float32)
-                data, label = self.maxPreProc(data), self.maxPreProc(label)
+                data, dmax = self.maxPreProc(data)
+                label, lmax = self.maxPreProc(label)
 
                 pred = self.model(data)
                 assert not torch.isnan(pred).any()
                 test_loss += self.lossFn(pred, label)
+                self.visualize(
+                    pred * lmax, label * lmax, epoch * len(self.trainLoader) + idx
+                )
 
         test_loss /= self.testLength
         return test_loss
@@ -102,12 +105,12 @@ class PCRNTrainer:
         if torch.isnan(tensor).any():
             self.replace_nan_with_nearest(tensor)
 
-        return tensor
+        return tensor, max
 
     def visualize(self, pred: torch.tensor, label: torch.tensor, step: int) -> None:
         pred, label = pred[0].detach().cpu().numpy(), label[0].detach().cpu().numpy()
         shape = pred.shape
-        fig, ax = plt.subplots(1, shape[-2],figsize=(10 * shape[-2], 10))
+        fig, ax = plt.subplots(1, shape[-2], figsize=(10 * shape[-2], 10))
         for i in range(shape[-2]):
             ax[i].scatter(
                 range(shape[-1]),

@@ -53,7 +53,7 @@ class Fin2VecDataset(Dataset):
         data.set_index("Date", inplace=True)
 
         src = data[self.inputs]
-        tgt = data[self.outputs]
+        # tgt = data[self.outputs]
         if self.term:
             current, maxidx = (
                 np.random.randint(self.cache[index][1] - self.term + 1),
@@ -63,8 +63,9 @@ class Fin2VecDataset(Dataset):
             if new > maxidx:
                 current, new = 0, self.term
             src = src.iloc[current : new - self.futures]
-            tgt = tgt.iloc[new - self.futures : new]
+            # tgt = tgt.iloc[new - self.futures : new]
         src = src.to_numpy().transpose((1, 0))
-        tgt = tgt.to_numpy().transpose((1, 0))
+        # tgt = tgt.to_numpy().transpose((1, 0))
 
-        return {"src": src, "tgt": tgt, "index": index}
+        # return {"src": src, "tgt": tgt, "index": index}
+        return {"src": src, "index": index}
