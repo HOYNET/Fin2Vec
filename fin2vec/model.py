@@ -17,7 +17,6 @@ class Fin2Vec(nn.Module):
         nlayers: int = 7,
         dropout: float = 0.1,
         decoder: nn.Module = None,
-        dropout: float = 0.1,
     ):
         super(Fin2Vec, self).__init__()
         self.encoder = encoder
