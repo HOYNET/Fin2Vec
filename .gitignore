@@ -5,3 +5,6 @@
 *.pyc
 *.zip
 checkpoints*
+*__pycache__*
+runs/*
+events.out*

@@ -2,15 +2,6 @@ import torch
 from torch import nn
 
 
-def getKernelSize(dates: int) -> list[int]:
-    thrsh = (dates - 3) // 2
-    result: list[int] = [1]
-    while result[-1] < thrsh:
-        result.append(result[-1] * 5)
-    del result[-1]
-    return result
-
-
 class Encoder(nn.Module):
     def __init__(
         self,
@@ -29,9 +20,9 @@ class Encoder(nn.Module):
         self.fusionSize = fusionSize
         self.embeddingSize = embeddingSize
 
-        self.kernelSizes = getKernelSize(self.dates)
+        self.kernelSizes = self.getKernelSize(self.dates)
         self.cnv1Ds: nn.ModuleList = nn.ModuleList()
-        self.cnv1DSizes: list[int] = []
+        self.cnv1DSizes: list = []
         for kernelSize in self.kernelSizes:
             cnv: nn.Sequential = None
             cnv = nn.Sequential(
@@ -98,6 +89,14 @@ class Encoder(nn.Module):
             torch.zeros(self.num_layers, batch_size, self.hidden_size),
         )
 
+    def getKernelSize(self, dates: int) -> list:
+        thrsh = (dates - 3) // 2
+        result = [1]
+        while result[-1] < thrsh:
+            result.append(result[-1] * 5)
+        del result[-1]
+        return result
+
 
 class Decoder(nn.Module):
     def __init__(self, dates: int, outputSize: int, embeddingSize: (int, int)):
@@ -146,24 +145,35 @@ class Decoder(nn.Module):
         return result
 
 
-class Hoynet(nn.Module):
+# Parallelized Convolutional-Recurrent Network
+class PCRN(nn.Module):
     def __init__(
         self,
         dates,
-        inputSize,
-        outputSize,
-        hiddenSize,
-        layerSize,
-        fusionSize,
-        embeddingSize: (int, int),
+        ninputs,
+        noutputs,
+        hiddens,
+        nlayers,
+        fusions,
+        embeddings: (int, int),
     ):
         super().__init__()
-        self.encoder = Encoder(
-            dates, inputSize, hiddenSize, layerSize, fusionSize, embeddingSize
-        )
-        self.decoder = Decoder(dates, outputSize, embeddingSize)
+        self.encoder = Encoder(dates, ninputs, hiddens, nlayers, fusions, embeddings)
+        self.decoder = Decoder(dates, noutputs, embeddings)
 
     def forward(self, x):
         result = self.encoder(x)
         result = self.decoder(result)
         return result
+
+
+def Config2PCRN(config: dict) -> PCRN:
+    return PCRN(
+        config["term"],
+        len(config["inputs"]),
+        len(config["outputs"]),
+        config["hiddens"],
+        config["nlayers"],
+        config["fusions"],
+        tuple(tuple(map(int, config["embeddings"].split(",")))),
+    )
