@@ -13,11 +13,7 @@ dataset = Fin2VecDataset(
 )
 
 traindataLoader = DataLoader(
-    dataset,
-    batch_size=10,
-    shuffle=True,
-    pin_memory=True,
-    num_workers=5
+    dataset, batch_size=10, shuffle=True, pin_memory=True, num_workers=5
 )
 
 for i, batch in enumerate(traindataLoader):

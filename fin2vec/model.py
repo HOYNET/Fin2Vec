@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import math
+import random
 
 
 # Finance to Vector
@@ -21,8 +22,9 @@ class Fin2Vec(nn.Module):
         super(Fin2Vec, self).__init__()
         self.encoder = encoder
         self.d_model = d_model
-        self.ncodes = ncodes
+        self.ncodes = ncodes + 1
         self.embeddings = embeddings[0] * embeddings[1]
+        self.masked_code = ncodes
         self.word2embedding = nn.Embedding(self.ncodes, self.embeddings)
 
         self.inputDenseSrc = nn.Linear(self.embeddings, d_model)
@@ -39,7 +41,7 @@ class Fin2Vec(nn.Module):
 
         self.decoder = decoder
 
-    def forward(self, src: torch.tensor, idx: torch.tensor):
+    def forward(self, student: bool, src: torch.tensor, idx: torch.tensor):
         srcShape, idxShape = src.shape, idx.shape
         assert srcShape[0] == idxShape[0] and srcShape[1] == idxShape[1]
 
@@ -48,6 +50,17 @@ class Fin2Vec(nn.Module):
         with torch.no_grad():
             src = self.encoder(src) * math.sqrt(self.d_model)
         src = src.reshape(srcShape[0], srcShape[1], -1)
+
+        mask = torch.Tensor(srcShape[0], srcShape[1]).fill_(False)
+        if student:
+            for batch_ in range(srcShape[0]):
+                ##############여기에 num_random에 진자 데이터 개수를 적기 end값을 적으면 될듯함##################
+                num_random = srcShape[1]
+                maskedIDX_list = random.sample(range(num_random), num_random * 15 / 100)
+                src[batch_, maskedIDX_list, :] = 0
+                idx[batch_, maskedIDX_list] = self.masked_code
+                mask[batch_, maskedIDX_list] = True
+
         idx = self.word2embedding(idx).reshape(idxShape[0], idxShape[1], -1)
         src += idx
 
@@ -59,4 +72,4 @@ class Fin2Vec(nn.Module):
             with torch.no_grad():
                 result = self.decoder(result)
 
-        return result
+        return result, mask

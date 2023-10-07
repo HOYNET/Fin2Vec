@@ -22,7 +22,12 @@ HoynetConfig:
         embeddings: 10,10
       # models: path....
     fin2vec:
+      #models: fin2vec pretrained model이 있을 때
+      encoder: # pcrn pretrained 값을 넣어야 함
       pcrn:
+        data:
+          codeFile: "./data/NASDAQ_FC_STK_IEM_IFO.csv"
+          priceFile: "./data/data_2.csv"
         config:
           term: 300
           inputs: ["Open", "High", "Low", "Close", "Volume"]
@@ -31,6 +36,14 @@ HoynetConfig:
           nlayers: 7
           fusions: 32
           embeddings: 10,10
+      d2v:
+        config:
+          type_: "finance"
+          device: "cpu"
+          embed_dim: 10
+          ema_decay: 0.999
+          ema_end_decay: 0.9999
+          ema_anneal_end_step: 30000
       config:
         ncodes:
         outputs:
@@ -38,6 +51,7 @@ HoynetConfig:
         nhead:
         d_hid:
         nlayers:
+        dropout:
       train:
         epochs: 500
         batches: 30
