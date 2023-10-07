@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader
 from fin2vec import Fin2VecDataset
 import numpy as np
 
+inputs = ["Open", "Close", "High", "Low"]
 dataset = Fin2VecDataset(
     "data/NASDAQ_FC_STK_IEM_IFO.csv",
     "data/data_2.csv",
@@ -11,6 +12,8 @@ dataset = Fin2VecDataset(
     ("2020-03-01", "2022-03-01", "%Y-%m-%d"),
     True,
 )
+
+print(dataset.__len__())
 
 traindataLoader = DataLoader(
     dataset,

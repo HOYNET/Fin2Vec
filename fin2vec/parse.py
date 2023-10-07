@@ -113,10 +113,7 @@ class Fin2VecDataset(Dataset):
             [x[1]["Date"].max() for x in groups], dtype=np.datetime64
         )
         self.lengths = np.array(
-            [
-                (self.maxTimes[i] - self.minTimes[i]).astype(int)
-                for i in range(len(groups))
-            ],
+            [len(x[1]) for x in groups],
             dtype=np.int64,
         )
         lengths = groups.size()
