@@ -1,7 +1,7 @@
 import argparse
 import torch
 from torch import nn
-from pcrn import PCRN, PCRNDataset, Config2PCRN
+from pcrn import PCRN, PCRNDataset, Config2PCRN, PCRNTrainer
 import yaml
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")

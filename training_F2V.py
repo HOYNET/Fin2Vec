@@ -1,9 +1,9 @@
 import argparse
 import torch
 from torch import nn
-from pcrn import PCRN, PCRNTrainer, Config2PCRN
+from pcrn import Config2PCRN
 from fin2vec import Fin2Vec, Fin2VecDataset, Fin2VecTrainer
-from data2vec import data2vec, ema
+from data2vec import data2vec
 import yaml
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
@@ -47,12 +47,12 @@ if __name__ == "__main__":
         )
 
         # load encoder
-        encoder: Config2PCRN(config)
+        encoder= Config2PCRN(config)
         if "encoder" in fin2vec:
             encoder.load_state_dict(torch.load(fin2vec["ecoder"], map_location=device))
 
         # load fin2vec
-        model: Fin2Vec(
+        model= Fin2Vec(
             encoder,
             dataset.__len__(),
             config["embeddings"],
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
 
         # load data2vec
-        d2v: data2vec(
+        d2v= data2vec(
             model,
             fin2vec,
         )
