@@ -48,10 +48,7 @@ class Encoder(nn.Module):
             self.cnv1Ds.append(cnv)
             self.cnv1DSizes.append(self.dates - 2 * kernelSize - 2)
 
-        self.cnnFusion = nn.Linear(
-            sum(self.cnv1DSizes),
-            fusionSize,
-        )
+        self.cnnFusion = nn.Linear(sum(self.cnv1DSizes), fusionSize,)
 
         self.rnn = nn.Sequential(
             nn.GRU(
@@ -163,7 +160,7 @@ class PCRN(nn.Module):
 
     def forward(self, x):
         result = self.encoder(x)
-        #result = self.decoder(result)
+        # result = self.decoder(result)
         return result
 
 

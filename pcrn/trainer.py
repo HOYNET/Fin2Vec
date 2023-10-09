@@ -25,13 +25,13 @@ class PCRNTrainer:
         traindataset, testdataset = random_split(
             dataset, [trainLength, len(dataset) - trainLength]
         )
-        self.trainLoader, self.testLoader = DataLoader(
-            traindataset,
-            batch_size=batches,
-            shuffle=True,
-        ), DataLoader(testdataset, batch_size=batches, shuffle=True)
-        self.trainLength, self.testLength = len(self.trainLoader.dataset), len(
-            self.testLoader.dataset
+        self.trainLoader, self.testLoader = (
+            DataLoader(traindataset, batch_size=batches, shuffle=True,),
+            DataLoader(testdataset, batch_size=batches, shuffle=True),
+        )
+        self.trainLength, self.testLength = (
+            len(self.trainLoader.dataset),
+            len(self.testLoader.dataset),
         )
 
         self.optimizer = optimizer
@@ -56,9 +56,10 @@ class PCRNTrainer:
         trainLoss = 0
 
         for idx, batch in enumerate(self.trainLoader):
-            data, label = batch["data"].to(self.device).to(dtype=torch.float32), batch[
-                "label"
-            ].to(self.device).to(dtype=torch.float32)
+            data, label = (
+                batch["data"].to(self.device).to(dtype=torch.float32),
+                batch["label"].to(self.device).to(dtype=torch.float32),
+            )
             data, dmax = self.maxPreProc(data)
             label, lmax = self.maxPreProc(label)
 
@@ -82,9 +83,10 @@ class PCRNTrainer:
 
         with torch.no_grad():
             for idx, batch in enumerate(self.testLoader):
-                data, label = batch["data"].to(self.device).to(
-                    dtype=torch.float32
-                ), batch["label"].to(self.device).to(dtype=torch.float32)
+                data, label = (
+                    batch["data"].to(self.device).to(dtype=torch.float32),
+                    batch["label"].to(self.device).to(dtype=torch.float32),
+                )
                 data, dmax = self.maxPreProc(data)
                 label, lmax = self.maxPreProc(label)
 
@@ -113,11 +115,7 @@ class PCRNTrainer:
         fig, ax = plt.subplots(1, shape[-2], figsize=(10 * shape[-2], 10))
         for i in range(shape[-2]):
             ax[i].scatter(
-                range(shape[-1]),
-                label[i, :],
-                label="X",
-                color="blue",
-                alpha=0.7,
+                range(shape[-1]), label[i, :], label="X", color="blue", alpha=0.7,
             )
             ax[i].scatter(
                 range(shape[-1]),

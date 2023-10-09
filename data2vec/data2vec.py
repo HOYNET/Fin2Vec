@@ -10,9 +10,9 @@ class Data2vec(nn.Module):
 
     def __init__(self, encoder: nn.Module, cfg, **kwargs):
         super(Data2vec, self).__init__()
-        cfg = cfg['d2v']['config']
-        self.type_ = cfg['type_']
-        self.embed_dim = cfg['embed_dim']  # regression head에서 맞춰줄 embed dimension
+        cfg = cfg["d2v"]["config"]
+        self.type_ = cfg["type_"]
+        self.embed_dim = cfg["embed_dim"]  # regression head에서 맞춰줄 embed dimension
         self.encoder = encoder
         self.__dict__.update(kwargs)
 
@@ -20,9 +20,11 @@ class Data2vec(nn.Module):
         self.regression_head = self._build_regression_head()  # 여기에다가 전 embedding과정 넣어야함
 
         self.cfg = cfg
-        self.ema_decay = self.cfg['ema_decay'] # 논문 기준 시작하는 T값(0.999)
-        self.ema_end_decay = self.cfg['ema_end_decay']  # 논문 기준 시작하는 T값(0.9999)
-        self.ema_anneal_end_step = self.cfg['ema_anneal_end_step']  # 얼마에 걸쳐서 decay값을 변경할지
+        self.ema_decay = self.cfg["ema_decay"]  # 논문 기준 시작하는 T값(0.999)
+        self.ema_end_decay = self.cfg["ema_end_decay"]  # 논문 기준 시작하는 T값(0.9999)
+        self.ema_anneal_end_step = self.cfg[
+            "ema_anneal_end_step"
+        ]  # 얼마에 걸쳐서 decay값을 변경할지
 
     def _build_regression_head(self):
         """
@@ -78,7 +80,7 @@ class Data2vec(nn.Module):
 
         """
         # model forward in student mode
-        x, mask = self.encoder(src=src, idx=idx, end=end,student=True)
+        x, mask = self.encoder(src=src, idx=idx, end=end, student=True)
 
         # model forward in teacher mode
         with torch.no_grad():

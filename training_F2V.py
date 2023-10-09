@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from pcrn import Config2PCRN
 from fin2vec import Fin2Vec, Fin2VecDataset, Fin2VecTrainer
-from Data2vec import Data2vec
+from data2vec import Data2vec
 import yaml
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
@@ -36,10 +36,8 @@ if __name__ == "__main__":
         pcrn = fin2vec["pcrn"]
         data, config, train = pcrn["data"], pcrn["config"], fin2vec["train"]
 
-        
-
         # load encoder
-        encoder= Config2PCRN(config)
+        encoder = Config2PCRN(config)
         if "encoder" in fin2vec:
             encoder.load_state_dict(torch.load(fin2vec["encoder"], map_location=device))
 
@@ -51,11 +49,12 @@ if __name__ == "__main__":
             term=config["term"],
             period=("2020-03-01", "2022-03-01", "%Y-%m-%d"),
             cp949=True,
+            ngroup=60,
         )
 
         # load fin2vec
         config = fin2vec["config"]
-        model= Fin2Vec(
+        model = Fin2Vec(
             encoder,
             dataset.__len__(),
             tuple(tuple(map(int, config["embeddings"].split(",")))),
@@ -69,19 +68,23 @@ if __name__ == "__main__":
         if "model" in fin2vec:
             model.load_state_dict(torch.load(fin2vec["model"], map_location=device))
 
-
         # load data2vec
-        d2v= Data2vec(
-            model,
-            fin2vec,
-        )
+        d2v = Data2vec(model, fin2vec,)
         model.to(device)
 
         # make trainer
         lossFn = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=train["lr"])
         trainer = Fin2VecTrainer(
-            model, d2v, dataset, train["batches"], train["eval"], optimizer, device, fin2vec, lossFn
+            model,
+            d2v,
+            dataset,
+            train["batches"],
+            train["eval"],
+            optimizer,
+            device,
+            fin2vec,
+            lossFn,
         )
 
         # train

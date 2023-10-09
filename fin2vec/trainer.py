@@ -27,13 +27,13 @@ class Fin2VecTrainer:
         traindataset, testdataset = random_split(
             dataset, [trainLength, len(dataset) - trainLength]
         )
-        self.trainLoader, self.testLoader = DataLoader(
-            traindataset,
-            batch_size=batches,
-            shuffle=True,
-        ), DataLoader(testdataset, batch_size=batches, shuffle=True)
-        self.trainLength, self.testLength = len(self.trainLoader.dataset), len(
-            self.testLoader.dataset
+        self.trainLoader, self.testLoader = (
+            DataLoader(traindataset, batch_size=batches, shuffle=True,),
+            DataLoader(testdataset, batch_size=batches, shuffle=True),
+        )
+        self.trainLength, self.testLength = (
+            len(self.trainLoader.dataset),
+            len(self.testLoader.dataset),
         )
 
         self.optimizer = optimizer
@@ -57,9 +57,11 @@ class Fin2VecTrainer:
 
         for batch in self.trainLoader:
             print("#", end="")
-            src, idx, end = batch["src"].to(self.device).to(dtype=torch.float32), batch[
-                "index"
-            ].to(self.device).to(dtype=torch.float32), batch["end"].to(self.device).to(dtype=torch.bool)
+            src, idx, end = (
+                batch["src"].to(self.device).to(dtype=torch.float32),
+                batch["index"].to(self.device).to(dtype=torch.float32),
+                batch["end"].to(self.device).to(dtype=torch.bool),
+            )
             src, idx = self.maxPreProc(src), self.maxPreProc(idx)
 
             self.optimizer.zero_grad()
@@ -83,9 +85,10 @@ class Fin2VecTrainer:
         with torch.no_grad():
             for batch in self.testLoader:
                 print("#", end="")
-                src, idx = batch["src"].to(self.device).to(dtype=torch.float32), batch[
-                    "index"
-                ].to(self.device).to(dtype=torch.float32)
+                src, idx = (
+                    batch["src"].to(self.device).to(dtype=torch.float32),
+                    batch["index"].to(self.device).to(dtype=torch.float32),
+                )
                 src, idx = self.maxPreProc(src), self.maxPreProc(idx)
 
                 pred, tgt, mask = self.model(

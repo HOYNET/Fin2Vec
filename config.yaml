@@ -1,6 +1,6 @@
 HoynetConfig:
   mode: "training"
-  device: "cuda:0"
+  device: "cpu"
   models:
     pcrn:
       data:
@@ -40,7 +40,7 @@ HoynetConfig:
       d2v:
         config:
           type_: "finance"
-          device: "cuda:0"
+          device: "cpu"
           embed_dim: 10
           ema_decay: 0.999
           ema_end_decay: 0.9999
