@@ -24,10 +24,10 @@ class EMA:
 
         self.model.requires_grad_(False)
         self.cfg = cfg
-        self.device = cfg.device
+        self.device = cfg['device']
         self.model.to(self.device)
         self.skip_keys = skip_keys or set()
-        self.decay = self.cfg.ema_decay
+        self.decay = self.cfg['ema_decay']
         self.num_updates = 0
 
     @staticmethod

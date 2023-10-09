@@ -57,16 +57,17 @@ class Fin2VecTrainer:
 
         for batch in self.trainLoader:
             print("#", end="")
-            src, idx = batch["src"].to(self.device).to(dtype=torch.float32), batch[
+            src, idx, end = batch["src"].to(self.device).to(dtype=torch.float32), batch[
                 "index"
-            ].to(self.device).to(dtype=torch.float32)
+            ].to(self.device).to(dtype=torch.float32), batch["end"].to(self.device).to(dtype=torch.bool)
             src, idx = self.maxPreProc(src), self.maxPreProc(idx)
 
             self.optimizer.zero_grad()
             pred, tgt, mask = self.model(
-                encoder=self.encoder, cfg=self.d2v_cfg, src=src, idx=idx
+                encoder=self.encoder, cfg=self.d2v_cfg, src=src, idx=idx, end=end
             )  # student outputs, teacher outputs in order
-            assert not torch.isnan(pred).any() and torch.isnan(tgt).any()
+            assert not (torch.isnan(pred).any() and torch.isnan(tgt).any())
+            mask = mask.to(dtype=torch.bool)
             loss = self.lossFn(pred[mask], tgt[mask])
             loss.backward()
             self.optimizer.step()

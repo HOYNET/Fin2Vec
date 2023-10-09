@@ -5,11 +5,12 @@
       "name": "Python: training",
       "type": "python",
       "request": "launch",
-      "program": "training0.py",
+      "program": "training_F2V.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
-        "-c","config.yaml"
+        "-c",
+        "config.yaml"
       ]
     },
     {

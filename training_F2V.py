@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from pcrn import Config2PCRN
 from fin2vec import Fin2Vec, Fin2VecDataset, Fin2VecTrainer
-from data2vec import data2vec
+from Data2vec import Data2vec
 import yaml
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
@@ -36,6 +36,13 @@ if __name__ == "__main__":
         pcrn = fin2vec["pcrn"]
         data, config, train = pcrn["data"], pcrn["config"], fin2vec["train"]
 
+        
+
+        # load encoder
+        encoder= Config2PCRN(config)
+        if "encoder" in fin2vec:
+            encoder.load_state_dict(torch.load(fin2vec["encoder"], map_location=device))
+
         # import dataset
         dataset = Fin2VecDataset(
             data["codeFile"],
@@ -46,29 +53,25 @@ if __name__ == "__main__":
             cp949=True,
         )
 
-        # load encoder
-        encoder= Config2PCRN(config)
-        if "encoder" in fin2vec:
-            encoder.load_state_dict(torch.load(fin2vec["ecoder"], map_location=device))
-
         # load fin2vec
+        config = fin2vec["config"]
         model= Fin2Vec(
             encoder,
             dataset.__len__(),
-            config["embeddings"],
-            fin2vec["outputs"],
-            fin2vec["d_model"],
-            fin2vec["nhead"],
-            fin2vec["d_hid"],
-            fin2vec["nlayers"],
-            fin2vec["dropout"],
+            tuple(tuple(map(int, config["embeddings"].split(",")))),
+            config["outputs"],
+            config["d_model"],
+            config["nhead"],
+            config["d_hid"],
+            config["nlayers"],
+            config["dropout"],
         )
         if "model" in fin2vec:
             model.load_state_dict(torch.load(fin2vec["model"], map_location=device))
 
 
         # load data2vec
-        d2v= data2vec(
+        d2v= Data2vec(
             model,
             fin2vec,
         )

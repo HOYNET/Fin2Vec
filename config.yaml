@@ -1,6 +1,6 @@
 HoynetConfig:
   mode: "training"
-  device: "cpu"
+  device: "cuda:0"
   models:
     pcrn:
       data:
@@ -22,8 +22,9 @@ HoynetConfig:
         embeddings: 10,10
       # models: path....
     fin2vec:
-      #models: fin2vec pretrained model이 있을 때
-      encoder: # pcrn pretrained 값을 넣어야 함
+      #models: fin2vec pretrained model
+      encoder: "./pretrained/hoynet_270.pth"
+      type_: "finance"
       pcrn:
         data:
           codeFile: "./data/NASDAQ_FC_STK_IEM_IFO.csv"
@@ -39,22 +40,22 @@ HoynetConfig:
       d2v:
         config:
           type_: "finance"
-          device: "cpu"
+          device: "cuda:0"
           embed_dim: 10
           ema_decay: 0.999
           ema_end_decay: 0.9999
           ema_anneal_end_step: 30000
       config:
-        ncodes:
-        outputs:
-        d_model:
-        nhead:
-        d_hid:
-        nlayers:
-        dropout:
+        embeddings: 10,10
+        outputs: 32
+        d_model: 64
+        nhead: 8
+        d_hid: 64
+        nlayers: 7 
+        dropout: 0.2
       train:
         epochs: 500
-        batches: 30
+        batches: 40
         lr: 0.0001
         eval: 0.2
         ckpt: ./checkpoints
