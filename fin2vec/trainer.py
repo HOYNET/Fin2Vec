@@ -3,13 +3,15 @@ from torch import nn
 from omegaconf import DictConfig
 from .parse import Fin2VecDataset
 from torch.utils.data import DataLoader, random_split
+from data2vec import Data2vec
+from .model import Fin2Vec
 
 
 class Fin2VecTrainer:
     def __init__(
         self,
-        encoder: nn.Module,
-        model: nn.Module,
+        data2vec: Data2vec,
+        model: Fin2Vec,
         dataset: Fin2VecDataset,
         batches: int,
         trainRate: float,
@@ -18,9 +20,9 @@ class Fin2VecTrainer:
         d2v_cfg: DictConfig,
         lossFn,
     ):
-        self.encoder = encoder  # fin2vec
-        self.model = model  # data2vec
+        self.data2vec, self.model = data2vec, model
         self.model.to(device)
+        self.data2vec.to(device)
 
         assert trainRate and trainRate < 1 and trainRate > 0
         trainLength = int(len(dataset) * trainRate)
@@ -53,29 +55,29 @@ class Fin2VecTrainer:
             print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
             if savingPth:
                 path = f"{savingPth}/hoynet_{t}.pth"
-                torch.save(self.encoder.state_dict(), path)
+                torch.save(self.model.state_dict(), path)
 
     def step(self) -> float:
         self.model.train()
         trainLoss = 0
 
-        for batch in self.trainLoader:
-            print("#", end="")
-            src, idx, end = (
+        for i, batch in enumerate(self.trainLoader):
+            print(i,end=" ")
+            src, idx, msk = (
                 self.maxPreProc(batch["src"].to(self.device).to(dtype=torch.float32)),
                 batch["index"].to(self.device).to(dtype=torch.int32),
                 batch["mask"].to(self.device).to(dtype=torch.bool),
             )
 
             self.optimizer.zero_grad()
-            pred, tgt, mask = self.model(
-                encoder=self.encoder, cfg=self.d2v_cfg, src=src, idx=idx, end=end
-            )  # student outputs, teacher outputs in order
+            pred, tgt, mask = self.data2vec(src, idx, msk)
             assert not (torch.isnan(pred).any() and torch.isnan(tgt).any())
+
             mask = mask.to(dtype=torch.bool)
             loss = self.lossFn(pred[mask], tgt[mask])
             loss.backward()
             self.optimizer.step()
+            print(f"Train Batch {i}  Loss : {loss.item()}")
             trainLoss += loss.item()
 
         trainLoss /= self.trainLength
@@ -86,19 +88,21 @@ class Fin2VecTrainer:
         test_loss = 0
 
         with torch.no_grad():
-            for batch in self.testLoader:
-                print("#", end="")
-                src, idx = (
-                    batch["src"].to(self.device).to(dtype=torch.float32),
-                    batch["index"].to(self.device).to(dtype=torch.float32),
+            for i, batch in enumerate(self.testLoader):
+                src, idx, msk = (
+                    self.maxPreProc(
+                        batch["src"].to(self.device).to(dtype=torch.float32)
+                    ),
+                    batch["index"].to(self.device).to(dtype=torch.int32),
+                    batch["mask"].to(self.device).to(dtype=torch.bool),
                 )
-                src, idx = self.maxPreProc(src), self.maxPreProc(idx)
 
-                pred, tgt, mask = self.model(
-                    encoder=self.encoder, cfg=self.d2v_cfg, src=src, idx=idx
-                )  # student outputs, teacher outputs in order
+                pred, tgt, mask = self.data2vec(src, idx, msk)
                 assert not torch.isnan(pred).any() and torch.isnan(tgt).any()
-                test_loss += self.lossFn(pred[mask], tgt[mask])
+                loss = self.lossFn(pred[mask], tgt[mask])
+
+                print(f"Test  Batch {i}  Loss : {loss.item()}")
+                test_loss += loss.item()
 
         test_loss /= self.testLength
         return test_loss

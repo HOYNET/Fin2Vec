@@ -55,8 +55,7 @@ if __name__ == "__main__":
         # load fin2vec
         config = fin2vec["config"]
         model = Fin2Vec(
-            encoder,
-            dataset.__len__(),
+            dataset.ncodes(),
             tuple(tuple(map(int, config["embeddings"].split(",")))),
             config["outputs"],
             config["d_model"],
@@ -69,15 +68,14 @@ if __name__ == "__main__":
             model.load_state_dict(torch.load(fin2vec["model"], map_location=device))
 
         # load data2vec
-        d2v = Data2vec(model, fin2vec,)
-        model.to(device)
+        data2vec = Data2vec(encoder, model, config["d_model"], fin2vec)
 
         # make trainer
         lossFn = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=train["lr"])
         trainer = Fin2VecTrainer(
+            data2vec,
             model,
-            d2v,
             dataset,
             train["batches"],
             train["eval"],

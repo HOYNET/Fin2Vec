@@ -51,20 +51,17 @@ class Fin2VecDataset(Dataset):
                 self.term,
             )
         )
-        _srcDF = self.rawPrice[
+        srcDF = self.rawPrice[
             self.rawPrice["tck_iem_cd"].isin(self.stockCode[msk])
         ].groupby("tck_iem_cd", sort=True)
-        srcDF = (
-            _srcDF.apply(self.tighten)
-            .reset_index(drop=True)
-            .groupby("tck_iem_cd", sort=True)
-        )
 
-        _src = np.array([group[self.inputs] for _, group in srcDF])
+        _src = np.array(
+            [self.tighten(group, (self.term, len(self.inputs))) for _, group in srcDF]
+        )
 
         src[msk] = src[msk] + _src.transpose((0, 2, 1))
         indices = np.random.permutation(np.arange(self.length, dtype=np.int32))
-        return {"src": src[indices], "index": indices, "mask": msk}
+        return {"src": src[indices][:10], "index": indices[:10], "mask": msk[:10]}
 
     def loadFromFile(self, codePath: str, pricePath: str, cp949: bool = True):
         self.rawCode: pd.DataFrame = (
@@ -146,12 +143,17 @@ class Fin2VecDataset(Dataset):
             & self.groupMsk
         )
 
-    def tighten(self, prices: pd.DataFrame) -> pd.DataFrame:
-        result = prices[
-            (prices["Date"] >= self.minTime) & (prices["Date"] <= self.maxTime)
-        ].reset_index(drop=True)
+    def tighten(self, prices: pd.DataFrame, shape) -> pd.DataFrame:
+        result = (
+            prices[(prices["Date"] >= self.minTime) & (prices["Date"] <= self.maxTime)]
+            .reset_index(drop=True)
+            .sort_values(by="Date")[self.inputs]
+        )
 
-        if len(result) != self.term:
-            return pd.DataFrame(np.zeros(result.shape), columns=result.columns.copy())
-        else:
-            return result
+        if result.shape != shape:
+            result = pd.DataFrame(np.zeros(shape), columns=result.columns.copy())
+        assert result.shape == shape
+        return result
+
+    def ncodes(self):
+        return self.length

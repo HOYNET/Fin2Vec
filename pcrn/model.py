@@ -165,16 +165,6 @@ class PCRN(nn.Module):
 
 
 def Config2PCRN(config: dict) -> PCRN:
-    # print((
-    #     config["term"],
-    #     len(config["inputs"]),
-    #     len(config["outputs"]),
-    #     config["hiddens"],
-    #     config["nlayers"],
-    #     config["fusions"],
-    #     tuple(tuple(map(int, config["embeddings"].split(",")))),
-    # ))
-    # print(1)
     return PCRN(
         config["term"],
         len(config["inputs"]),
