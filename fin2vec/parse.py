@@ -27,8 +27,6 @@ class Fin2VecDataset(Dataset):
         self.loadFromFile(codePath, pricePath, cp949)
         self.periodInspect(period, term)
         self.inputs = inputs
-        self.inputs.append("tck_iem_cd")
-        self.inputs.append("Date")
         self.timeline: np.ndarray = np.array(
             self.rawPrice["Date"].drop_duplicates(), dtype=np.datetime64
         )
@@ -40,10 +38,35 @@ class Fin2VecDataset(Dataset):
         return self.ngroup
 
     def __getitem__(self, index):
-        msk, period = self.groupMsk[index], (self.groupBegin[index], self.groupEnd)
-        ### 여기부터 다시
-        # return {"src": src[:40], "index": index[:40], "end": end[:40]}
-        return None  # {"src": src[:40], "index": index[:40], "end": end[:40]}
+        msk, self.minTime, self.maxTime = (
+            self.groupMsk[index],
+            self.groupBegin[index],
+            self.groupEnd[index],
+        )  # msk should be inversed
+
+        src = np.zeros(
+            shape=(
+                self.length,
+                len(self.inputs),
+                self.term,
+            )
+        )
+        _srcDF = self.rawPrice[
+            self.rawPrice["tck_iem_cd"].isin(self.stockCode[msk])
+        ].groupby("tck_iem_cd")
+        srcDF = _srcDF.apply(self.tighten).reset_index(drop=True).groupby("tck_iem_cd")
+
+        _src = np.zeros((len(srcDF), self.term, len(self.inputs)), dtype=np.float32)
+        for i, x in enumerate(srcDF):
+            if len(x[1]) == self.term:
+                _src[i] = x[1][self.inputs]
+            else:
+                _src[i] = np.zeros((self.term, len(self.inputs)), dtype=np.float32)
+                msk[i] = False
+
+        src[msk] = src[msk] + _src.transpose((0, 2, 1))
+        indices = np.random.permutation(np.arange(self.length, dtype=np.int32))
+        return {"src": src[indices], "index": indices, "mask": msk}
 
     def loadFromFile(self, codePath: str, pricePath: str, cp949: bool = True):
         self.rawCode: pd.DataFrame = (
@@ -84,7 +107,13 @@ class Fin2VecDataset(Dataset):
 
         self.infos = np.array(
             [
-                (x[0], i, x[1]["Date"].min(), x[1]["Date"].max(), len(x[1]),)
+                (
+                    x[0],
+                    i,
+                    x[1]["Date"].min(),
+                    x[1]["Date"].max(),
+                    len(x[1]),
+                )
                 for i, x in enumerate(groups)
             ],
             dtype=self.stock_info_dtype,
@@ -99,10 +128,10 @@ class Fin2VecDataset(Dataset):
         ).astype(np.bool_)
 
         startPos = np.random.random_integers(
-            low=0, high=len(self.timeline) - self.term, size=(self.ngroup)
+            low=0, high=len(self.timeline) - self.term - 1, size=(self.ngroup)
         )
         self.groupBegin = self.timeline[startPos]
-        self.groupEnd = self.timeline[startPos + self.term]
+        self.groupEnd = self.timeline[startPos + self.term - 1]
         self.groupMsk = (
             (
                 np.tile(self.groupBegin, (len(self.infos["minTime"]), 1)).transpose(
@@ -118,4 +147,13 @@ class Fin2VecDataset(Dataset):
             )
             & self.groupMsk
         )
-        print(1)
+
+    def tighten(self, prices: pd.DataFrame) -> pd.DataFrame:
+        result = prices[
+            (prices["Date"] >= self.minTime) & (prices["Date"] <= self.maxTime)
+        ].reset_index(drop=True)
+
+        if len(result) != self.term:
+            return np.zeros((self.term, len(self.inputs)))
+        else:
+            return result[self.inputs]
