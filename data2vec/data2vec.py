@@ -28,6 +28,8 @@ class Data2vec(nn.Module):
         self.q = 100
         self.d_model = d_model
 
+        self.device = torch.device("cpu")
+
     def ema_step(self):
         if self.ema_decay != self.ema_end_decay:
             if self.ema.num_updates >= self.ema_anneal_end_step:
@@ -53,11 +55,17 @@ class Data2vec(nn.Module):
         src = src.reshape(srcShape[0], srcShape[1], -1)
 
         # masking
-        studentSrc = torch.tensor(src)
+        # studentSrc = torch.tensor(src)
+        studentSrc = src.clone().detach().to(self.device)
         tknMsk = (
-            torch.randint(low=0, high=self.q - 1, size=(srcShape[0], srcShape[1]))
+            torch.randint(
+                low=0,
+                high=self.q - 1,
+                size=(srcShape[0], srcShape[1]),
+                device=self.device,
+            )
             < self.p
-        ) | (~msk)
+        ) & msk
         studentSrc[tknMsk] = 0
 
         # student
