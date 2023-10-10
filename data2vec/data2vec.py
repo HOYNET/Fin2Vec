@@ -57,7 +57,7 @@ class Data2vec(nn.Module):
         tknMsk = (
             torch.randint(low=0, high=self.q - 1, size=(srcShape[0], srcShape[1]))
             < self.p
-        )
+        ) | (~msk)
         studentSrc[tknMsk] = 0
 
         # student

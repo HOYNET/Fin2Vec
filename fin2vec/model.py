@@ -29,10 +29,14 @@ class Fin2Vec(nn.Module):
         )
 
         self.tfLinear0 = nn.Sequential(
-            nn.Linear(self.embeddings, d_model), nn.ReLU(True),
+            nn.Linear(self.embeddings, d_model),
+            nn.ReLU(True),
         )
         self.tfEncoder = nn.TransformerEncoder(tfENCLayer, nlayers)
-        self.tfLinear1 = nn.Sequential(nn.Linear(d_model, outputs), nn.ReLU(True),)
+        self.tfLinear1 = nn.Sequential(
+            nn.Linear(d_model, outputs),
+            nn.ReLU(True),
+        )
 
         self.decoder = decoder
 
@@ -45,7 +49,7 @@ class Fin2Vec(nn.Module):
 
         # transforming
         src = self.tfLinear0(src)
-        result = self.tfEncoder(src, src_key_padding_mask=msk)
+        result = self.tfEncoder(src, src_key_padding_mask=~msk)
         result = self.tfLinear1(result)
 
         # decoding

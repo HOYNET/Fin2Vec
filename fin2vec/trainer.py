@@ -72,7 +72,7 @@ class Fin2VecTrainer:
             assert not (torch.isnan(pred).any() and torch.isnan(tgt).any())
 
             mask = mask.to(dtype=torch.bool)
-            loss = self.lossFn(pred[mask], tgt[mask])
+            loss = self.lossFn(pred[~mask], tgt[~mask])
             loss.backward()
             self.optimizer.step()
             print(f"Train Batch {i}  Loss : {loss.item()}")
@@ -97,7 +97,7 @@ class Fin2VecTrainer:
 
                 pred, tgt, mask = self.data2vec(src, idx, msk)
                 assert not (torch.isnan(pred).any() and torch.isnan(tgt).any())
-                loss = self.lossFn(pred[mask], tgt[mask])
+                loss = self.lossFn(pred[~mask], tgt[~mask])
 
                 print(f"Test  Batch {i}  Loss : {loss.item()}")
                 test_loss += loss.item()
