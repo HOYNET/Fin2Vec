@@ -60,7 +60,7 @@ class Fin2VecDataset(Dataset):
             .groupby("tck_iem_cd", sort=True)
         )
 
-        _src = np.array([group[self.inputs].values for _, group in srcDF])
+        _src = np.array([group[self.inputs] for _, group in srcDF])
 
         src[msk] = src[msk] + _src.transpose((0, 2, 1))
         indices = np.random.permutation(np.arange(self.length, dtype=np.int32))
