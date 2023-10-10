@@ -53,16 +53,14 @@ class Fin2VecDataset(Dataset):
         )
         _srcDF = self.rawPrice[
             self.rawPrice["tck_iem_cd"].isin(self.stockCode[msk])
-        ].groupby("tck_iem_cd")
-        srcDF = _srcDF.apply(self.tighten).reset_index(drop=True).groupby("tck_iem_cd")
+        ].groupby("tck_iem_cd", sort=True)
+        srcDF = (
+            _srcDF.apply(self.tighten)
+            .reset_index(drop=True)
+            .groupby("tck_iem_cd", sort=True)
+        )
 
-        _src = np.zeros((len(srcDF), self.term, len(self.inputs)), dtype=np.float32)
-        for i, x in enumerate(srcDF):
-            if len(x[1]) == self.term:
-                _src[i] = x[1][self.inputs]
-            else:
-                _src[i] = np.zeros((self.term, len(self.inputs)), dtype=np.float32)
-                msk[i] = False
+        _src = np.array([group[self.inputs].values for _, group in srcDF])
 
         src[msk] = src[msk] + _src.transpose((0, 2, 1))
         indices = np.random.permutation(np.arange(self.length, dtype=np.int32))
@@ -154,6 +152,6 @@ class Fin2VecDataset(Dataset):
         ].reset_index(drop=True)
 
         if len(result) != self.term:
-            return np.zeros((self.term, len(self.inputs)))
+            return pd.DataFrame(np.zeros(result.shape), columns=result.columns.copy())
         else:
-            return result[self.inputs]
+            return result

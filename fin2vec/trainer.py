@@ -28,7 +28,11 @@ class Fin2VecTrainer:
             dataset, [trainLength, len(dataset) - trainLength]
         )
         self.trainLoader, self.testLoader = (
-            DataLoader(traindataset, batch_size=batches, shuffle=True,),
+            DataLoader(
+                traindataset,
+                batch_size=batches,
+                shuffle=True,
+            ),
             DataLoader(testdataset, batch_size=batches, shuffle=True),
         )
         self.trainLength, self.testLength = (
@@ -58,11 +62,10 @@ class Fin2VecTrainer:
         for batch in self.trainLoader:
             print("#", end="")
             src, idx, end = (
-                batch["src"].to(self.device).to(dtype=torch.float32),
-                batch["index"].to(self.device).to(dtype=torch.float32),
-                batch["end"].to(self.device).to(dtype=torch.bool),
+                self.maxPreProc(batch["src"].to(self.device).to(dtype=torch.float32)),
+                batch["index"].to(self.device).to(dtype=torch.int32),
+                batch["mask"].to(self.device).to(dtype=torch.bool),
             )
-            src, idx = self.maxPreProc(src), self.maxPreProc(idx)
 
             self.optimizer.zero_grad()
             pred, tgt, mask = self.model(
