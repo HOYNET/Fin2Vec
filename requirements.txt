@@ -1,5 +1,4 @@
 pandas
 numpy
-tensorboard
-tensorboardX
 yaml
+# conda install pytorch torchvision torchaudio cpuonly -c pytorch

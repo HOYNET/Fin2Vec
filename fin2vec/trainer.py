@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 from omegaconf import DictConfig
 from .parse import Fin2VecDataset
 from torch.utils.data import DataLoader, random_split
@@ -62,7 +61,6 @@ class Fin2VecTrainer:
         trainLoss = 0
 
         for i, batch in enumerate(self.trainLoader):
-            print(i,end=" ")
             src, idx, msk = (
                 self.maxPreProc(batch["src"].to(self.device).to(dtype=torch.float32)),
                 batch["index"].to(self.device).to(dtype=torch.int32),
@@ -98,7 +96,7 @@ class Fin2VecTrainer:
                 )
 
                 pred, tgt, mask = self.data2vec(src, idx, msk)
-                assert not torch.isnan(pred).any() and torch.isnan(tgt).any()
+                assert not (torch.isnan(pred).any() and torch.isnan(tgt).any())
                 loss = self.lossFn(pred[mask], tgt[mask])
 
                 print(f"Test  Batch {i}  Loss : {loss.item()}")
