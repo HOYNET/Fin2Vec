@@ -75,5 +75,6 @@ class Data2vec(nn.Module):
         with torch.no_grad():
             self.ema.model.eval()
             y = self.ema.model(src, idx, msk)
+            self.ema.step(self.model)
 
         return x, y, tknMsk
