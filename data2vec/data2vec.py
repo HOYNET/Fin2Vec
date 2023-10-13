@@ -8,7 +8,9 @@ from fin2vec import Fin2Vec
 class Data2vec(nn.Module):
     TYPES = ["finance"]
 
-    def __init__(self, encoder: nn.Module, model: Fin2Vec, d_model: int, cfg, **kwargs):
+    def __init__(
+        self, encoder: nn.Module, model: Fin2Vec, d_model: int, device, cfg, **kwargs
+    ):
         super(Data2vec, self).__init__()
         cfg = cfg["d2v"]["config"]
         self.type_ = cfg["type_"]
@@ -28,7 +30,7 @@ class Data2vec(nn.Module):
         self.q = 100
         self.d_model = d_model
 
-        self.device = torch.device("cpu")
+        self.device = torch.device(device)
 
     def ema_step(self):
         if self.ema_decay != self.ema_end_decay:

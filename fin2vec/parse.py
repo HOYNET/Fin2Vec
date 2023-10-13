@@ -61,7 +61,7 @@ class Fin2VecDataset(Dataset):
 
         src[msk] = src[msk] + _src.transpose((0, 2, 1))
         indices = np.random.permutation(np.arange(self.length, dtype=np.int32))
-        return {"src": src[indices][:10], "index": indices[:10], "mask": msk[:10]}
+        return {"src": src[indices][:100], "index": indices[:100], "mask": msk[:100]}
 
     def loadFromFile(self, codePath: str, pricePath: str, cp949: bool = True):
         self.rawCode: pd.DataFrame = (

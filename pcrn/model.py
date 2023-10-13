@@ -48,7 +48,10 @@ class Encoder(nn.Module):
             self.cnv1Ds.append(cnv)
             self.cnv1DSizes.append(self.dates - 2 * kernelSize - 2)
 
-        self.cnnFusion = nn.Linear(sum(self.cnv1DSizes), fusionSize,)
+        self.cnnFusion = nn.Linear(
+            sum(self.cnv1DSizes),
+            fusionSize,
+        )
 
         self.rnn = nn.Sequential(
             nn.GRU(

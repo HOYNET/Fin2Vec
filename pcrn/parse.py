@@ -1,67 +1,179 @@
-import pandas as pd
-import numpy as np
-from torch.utils.data import Dataset
+import torch
+from torch import nn
 
 
-class PCRNDataset(Dataset):
+class Encoder(nn.Module):
     def __init__(
         self,
-        codeFilePath,
-        priceFilePath,
-        inputFeatures: list,
-        outputFeatures: list,
-        cp949=True,
-        term: int = None,
+        dates: int,  # number of sequences
+        inputSize: int,  # number of features
+        hiddenSize: int,  # size of hiddenlayer
+        layerSize: int,  # size of layer in GRU
+        fusionSize: int,  # size of fusion features
+        embeddingSize: (int, int),  # size of embedding
     ):
-        self.rawCode: pd.DataFrame = (
-            pd.read_csv(codeFilePath, encoding="CP949")
-            if cp949
-            else pd.read_csv(codeFilePath)
-        )
-        self.rawPrice: pd.DataFrame = pd.read_csv(priceFilePath)
-        self.rawPrice = self.rawPrice.drop(columns=["Unnamed: 0"])
-        self.stockCode: pd.Series = self.rawCode["tck_iem_cd"].str.strip()
-        self.length = len(self.stockCode)
+        super().__init__()
+        self.dates = dates
+        self.inputSize = inputSize
+        self.hiddenSize = hiddenSize
+        self.layerSize = layerSize
+        self.fusionSize = fusionSize
+        self.embeddingSize = embeddingSize
 
-        self.term = term
-
-        lengths = self.rawPrice.groupby("tck_iem_cd").size()
-        adjusted_lengths = lengths.reindex(self.stockCode).fillna(0).astype(int).values
-        self.cache = np.column_stack(
-            (np.zeros_like(adjusted_lengths), adjusted_lengths)
-        )
-
-        valid_codes = self.cache[:, 1] >= self.term
-        self.stockCode = self.stockCode[valid_codes]
-        self.rawPrice = self.rawPrice[self.rawPrice["tck_iem_cd"].isin(self.stockCode)]
-        self.cache = self.cache[valid_codes]
-        self.length = len(self.stockCode)
-
-        self.inputs = inputFeatures
-        self.outputs = outputFeatures
-
-    def __len__(self):
-        return self.length
-
-    def __getitem__(self, index):
-        code: str = self.stockCode.iloc[index].strip()
-        raw: pd.DataFrame = self.rawPrice[self.rawPrice["tck_iem_cd"] == code].copy()
-        raw["Date"] = pd.to_datetime(raw["Date"], format="%Y-%m-%d")
-        raw.set_index("Date", inplace=True)
-
-        data = raw[self.inputs]
-        label = raw[self.outputs]
-        if self.term:
-            current, maxidx = (
-                np.random.randint(self.cache[index][1] - self.term + 1),
-                self.cache[index][1],
+        self.kernelSizes = self.getKernelSize(self.dates)
+        self.cnv1Ds: nn.ModuleList = nn.ModuleList()
+        self.cnv1DSizes: list = []
+        for kernelSize in self.kernelSizes:
+            cnv: nn.Sequential = None
+            cnv = nn.Sequential(
+                nn.Conv1d(
+                    in_channels=inputSize,
+                    out_channels=hiddenSize,
+                    kernel_size=kernelSize,
+                    stride=1,
+                    padding=0,
+                    padding_mode="replicate",
+                ),
+                nn.ReLU(inplace=True),
+                nn.Conv1d(
+                    in_channels=hiddenSize,
+                    out_channels=self.embeddingSize[0],
+                    kernel_size=kernelSize,
+                    stride=1,
+                    padding=0,
+                    padding_mode="replicate",
+                ),
+                nn.AvgPool1d(kernel_size=5, stride=1),
             )
-            new = current + self.term
-            if new > maxidx:
-                current, new = 0, self.term
-            data = data.iloc[current:new]
-            label = label.iloc[current:new]
-        data = data.to_numpy().transpose((1, 0))
-        label = label.to_numpy().transpose((1, 0))
+            self.cnv1Ds.append(cnv)
+            self.cnv1DSizes.append(self.dates - 2 * kernelSize - 2)
 
-        return {"data": data, "label": label}
+        self.cnnFusion = nn.Linear(
+            sum(self.cnv1DSizes),
+            fusionSize,
+        )
+
+        self.rnn = nn.Sequential(
+            nn.GRU(
+                input_size=self.inputSize,
+                hidden_size=self.embeddingSize[0],
+                num_layers=self.layerSize,
+                batch_first=True,
+            )
+        )
+        self.rnnFusion = nn.Linear(self.layerSize, fusionSize)
+
+        self.finalFusion = nn.Sequential(
+            nn.Linear(2 * fusionSize, self.embeddingSize[1]),
+            nn.BatchNorm1d(embeddingSize[0]),
+        )
+
+    def forward(self, x):
+        cnnInput = x
+        rnnInput = x.transpose(-1, -2)
+        features: list[torch.Tensor] = list(map(lambda m: m(cnnInput), self.cnv1Ds))
+        features.append(self.rnn(rnnInput)[1].transpose(-2, -3).transpose(-1, -2))
+
+        cnnFusion = torch.concat(features[0:-1], dim=2)
+        cnnFusion = self.cnnFusion(cnnFusion)
+        rnnFusion = self.rnnFusion(features[-1])
+
+        finalFusion = torch.concat((cnnFusion, rnnFusion), dim=2)
+        embedding = self.finalFusion(finalFusion)
+
+        return embedding
+
+    def init_hidden(self, batch_size):
+        return (
+            torch.zeros(self.num_layers, batch_size, self.hidden_size),
+            torch.zeros(self.num_layers, batch_size, self.hidden_size),
+        )
+
+    def getKernelSize(self, dates: int) -> list:
+        thrsh = (dates - 3) // 2
+        result = [1]
+        while result[-1] < thrsh:
+            result.append(result[-1] * 5)
+        del result[-1]
+        return result
+
+
+class Decoder(nn.Module):
+    def __init__(self, dates: int, outputSize: int, embeddingSize: (int, int)):
+        super().__init__()
+        self.dates = dates
+        self.outputSize = outputSize
+        self.embeddingSize = embeddingSize
+
+        self.larger0 = nn.Sequential(
+            nn.Linear(embeddingSize[1], embeddingSize[1] * 2),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(
+                in_channels=self.embeddingSize[0],
+                out_channels=self.embeddingSize[0] * 2,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+            ),
+            nn.Linear(embeddingSize[1] * 2, embeddingSize[1] * 4),
+        )
+
+        self.cnv = nn.Sequential(
+            nn.Conv1d(
+                in_channels=self.embeddingSize[0] * 2,
+                out_channels=64,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+            ),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(
+                in_channels=64,
+                out_channels=outputSize,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+            ),
+        )
+
+        self.larger1 = nn.Linear(embeddingSize[1] * 4, dates)
+
+    def forward(self, x):
+        result = self.larger0(x)
+        result = self.cnv(result)
+        result = self.larger1(result)
+        return result
+
+
+# Parallelized Convolutional-Recurrent Network
+class PCRN(nn.Module):
+    def __init__(
+        self,
+        dates,
+        ninputs,
+        noutputs,
+        hiddens,
+        nlayers,
+        fusions,
+        embeddings: (int, int),
+    ):
+        super().__init__()
+        self.encoder = Encoder(dates, ninputs, hiddens, nlayers, fusions, embeddings)
+        self.decoder = Decoder(dates, noutputs, embeddings)
+
+    def forward(self, x):
+        result = self.encoder(x)
+        # result = self.decoder(result)
+        return result
+
+
+def Config2PCRN(config: dict) -> PCRN:
+    return PCRN(
+        config["term"],
+        len(config["inputs"]),
+        len(config["outputs"]),
+        config["hiddens"],
+        config["nlayers"],
+        config["fusions"],
+        tuple(tuple(map(int, config["embeddings"].split(",")))),
+    )

@@ -49,7 +49,7 @@ if __name__ == "__main__":
             term=config["term"],
             period=("2020-03-01", "2022-03-01", "%Y-%m-%d"),
             cp949=True,
-            ngroup=60,
+            ngroup=6000,
         )
 
         # load fin2vec
@@ -68,7 +68,7 @@ if __name__ == "__main__":
             model.load_state_dict(torch.load(fin2vec["model"], map_location=device))
 
         # load data2vec
-        data2vec = Data2vec(encoder, model, config["d_model"], fin2vec)
+        data2vec = Data2vec(encoder, model, config["d_model"], device, fin2vec)
 
         # make trainer
         lossFn = nn.MSELoss()

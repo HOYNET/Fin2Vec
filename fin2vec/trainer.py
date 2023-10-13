@@ -32,15 +32,15 @@ class Fin2VecTrainer:
                 traindataset,
                 batch_size=batches,
                 shuffle=True,
-                # pin_memory=True,
-                # num_workers=15,
+                pin_memory=True,
+                num_workers=5,
             ),
             DataLoader(
                 testdataset,
                 batch_size=batches,
                 shuffle=True,
-                # pin_memory=True,
-                # num_workers=15,
+                pin_memory=True,
+                num_workers=5,
             ),
         )
         self.trainLength, self.testLength = (
