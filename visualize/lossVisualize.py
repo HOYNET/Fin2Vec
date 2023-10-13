@@ -1,5 +1,9 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import argparse
+from matplotlib.ticker import LogLocator
+
+matplotlib.use("TkAgg")
 
 parser = argparse.ArgumentParser(description="Get Path of Files.")
 parser.add_argument(
@@ -20,8 +24,16 @@ parser.add_argument(
     help="Loss Info",
 )
 
+parser.add_argument(
+    "-l",
+    "--logScale",
+    metavar="path",
+    dest="logScale",
+    type=bool,
+    help="Loss Info",
+)
 
-# 파일 읽기 함수
+
 def read_losses(file_path):
     with open(file_path, "r") as file:
         lines = file.readlines()
@@ -41,30 +53,34 @@ def read_losses(file_path):
     return train_losses, test_losses
 
 
-# 그래프 그리기 함수
-def plot_losses(info, train_losses, test_losses):
+def plot_losses(info, train_losses, test_losses, logScale=False):
     epochs = list(range(1, len(train_losses) + 1))
+
+    ylabel = "Loss"
+    if logScale:
+        plt.yscale("log")
+        ylabel += "_logscale"
+        plt.gca().yaxis.set_major_locator(LogLocator(base=10, numticks=15))
+        plt.gca().yaxis.set_minor_locator(LogLocator(base=10, subs="all", numticks=15))
 
     plt.plot(epochs, train_losses, marker="^", label="Train Loss")
     plt.plot(epochs, test_losses, marker="s", label="Test Loss")
 
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel(ylabel)
     plt.title(f"Train and Test Loss Over Epochs : {info}")
     plt.legend()
     plt.grid(True)
     plt.savefig(f"{info}.png")
+    plt.close()
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
     assert args.lossFile and args.lossInfo
 
-    # 파일 경로 지정
     file_path = args.lossFile
 
-    # 파일에서 데이터를 읽어옵니다.
     train_losses, test_losses = read_losses(file_path)
 
-    # 읽어온 손실 데이터로 그래프를 그립니다.
-    plot_losses(args.lossInfo, train_losses, test_losses)
+    plot_losses(args.lossInfo, train_losses, test_losses, args.logScale)

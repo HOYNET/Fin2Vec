@@ -2,7 +2,10 @@ import torch
 from torch import nn
 from .parse import PCRNDataset
 from torch.utils.data import DataLoader, random_split
+import matplotlib
 import matplotlib.pyplot as plt
+
+matplotlib.use("TkAgg")
 
 
 class PCRNTrainer:

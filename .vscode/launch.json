@@ -2,16 +2,22 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Python: training demo",
+      "type": "python",
+      "request": "launch",
+      "program": "./training_demo.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "./configurations/demo/train.yml"]
+    },
+    {
       "name": "Python: training",
       "type": "python",
       "request": "launch",
       "program": "training_F2V.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": [
-        "-c",
-        "config.yaml"
-      ]
+      "args": ["-c", "config.yaml"]
     },
     {
       "name": "Python: 현재 파일",

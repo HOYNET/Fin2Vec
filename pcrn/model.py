@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import yaml
 
 
 class Encoder(nn.Module):
@@ -167,13 +168,24 @@ class PCRN(nn.Module):
         return result
 
 
-def Config2PCRN(config: dict) -> PCRN:
-    return PCRN(
-        config["term"],
-        len(config["inputs"]),
-        len(config["outputs"]),
-        config["hiddens"],
-        config["nlayers"],
-        config["fusions"],
-        tuple(tuple(map(int, config["embeddings"].split(",")))),
+def Config2PCRN(path, device) -> (PCRN, int):
+    with open(path) as f:
+        yml = yaml.load(f, Loader=yaml.FullLoader)
+        pcrn = yml["pcrn"]
+
+    model = PCRN(
+        pcrn["term"],
+        len(pcrn["inputs"]),
+        len(pcrn["outputs"]),
+        pcrn["hiddens"],
+        pcrn["nlayers"],
+        pcrn["fusions"],
+        tuple(tuple(map(int, pcrn["embeddings"].split(",")))),
     )
+
+    if "weigth" in pcrn:
+        model.load_state_dict(torch.load(pcrn["weight"], map_location=device))
+
+    model.to(device)
+
+    return device, pcrn["term"], pcrn["inputs"]

@@ -15,7 +15,6 @@ class Fin2VecTrainer:
         testRate: float,
         optimizer: torch.optim.Optimizer,
         device: torch.device,
-        d2v_cfg,
         lossFn,
     ):
         self.data2vec, self.model = data2vec, model
@@ -51,7 +50,6 @@ class Fin2VecTrainer:
         self.optimizer = optimizer
         self.lossFn = lossFn
         self.device = device
-        self.d2v_cfg = d2v_cfg
 
     def __call__(self, epochs: int, savingPth: str = None) -> None:
         for t in range(epochs):

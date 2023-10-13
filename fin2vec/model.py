@@ -1,5 +1,7 @@
 import torch
 from torch import nn
+import yaml
+from pcrn import PCRN, Config2PCRN
 
 
 # Finance to Vector
@@ -58,3 +60,30 @@ class Fin2Vec(nn.Module):
                 result = self.decoder(result)
 
         return result
+
+
+def Config2Fin2Vec(pth: str, device) -> (Fin2Vec, PCRN, int):
+    with open(pth) as f:
+        yml = yaml.load(f, Loader=yaml.FullLoader)
+        fin2vec = yml["fin2vec"]
+
+    model = Fin2Vec(
+        fin2vec["ncode"],
+        tuple(tuple(map(int, fin2vec["embeddings"].split(",")))),
+        fin2vec["outputs"],
+        fin2vec["d_model"],
+        fin2vec["nhead"],
+        fin2vec["d_hid"],
+        fin2vec["nlayers"],
+        fin2vec["dropout"],
+        None,
+    )
+
+    if "weigth" in fin2vec:
+        model.load_state_dict(torch.load(fin2vec["weight"], map_location=device))
+
+    model.to(device)
+
+    encoder, term, inputs = Config2PCRN(fin2vec["encoder"], device)
+
+    return model, encoder, term, inputs

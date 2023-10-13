@@ -2,28 +2,33 @@ import torch
 import torch.nn as nn
 import math
 from .ema import EMA
-from fin2vec import Fin2Vec
+import yaml
 
 
 class Data2vec(nn.Module):
     TYPES = ["finance"]
 
     def __init__(
-        self, encoder: nn.Module, model: Fin2Vec, d_model: int, device, cfg, **kwargs
+        self,
+        encoder: nn.Module,
+        model: nn.Module,
+        d_model: int,
+        decay,
+        device,
+        endDecay,
+        endStep,
+        **kwargs
     ):
         super(Data2vec, self).__init__()
-        cfg = cfg["d2v"]["config"]
-        self.type_ = cfg["type_"]
         self.encoder = encoder  # PCRN
         self.model = model  # Fin2Vec
         self.__dict__.update(kwargs)
 
-        self.ema = EMA(self.model, cfg)  # EMA acts as the teacher
+        self.ema = EMA(self.model, decay, device)  # EMA acts as the teacher
 
-        self.cfg = cfg
-        self.ema_decay = self.cfg["ema_decay"]
-        self.ema_end_decay = self.cfg["ema_end_decay"]
-        self.ema_anneal_end_step = self.cfg["ema_anneal_end_step"]
+        self.ema_decay = decay
+        self.ema_end_decay = endDecay
+        self.ema_anneal_end_step = endStep
 
         mskRate = 0.2  # p/q
         self.p = int(mskRate * 100)
@@ -80,3 +85,23 @@ class Data2vec(nn.Module):
             self.ema.step(self.model)
 
         return x, y, tknMsk
+
+
+def Cofing2Data2Vec(path, model: nn.Module, encoder: nn.Module, device) -> Data2vec:
+    with open(path) as f:
+        yml = yaml.load(f, Loader=yaml.FullLoader)
+        data2vec = yml["data2vec"]
+
+    model = Data2vec(
+        encoder,
+        model,
+        model.d_model,
+        data2vec["ema_decay"],
+        device,
+        data2vec["ema_end_decay"],
+        data2vec["ema_anneal_end_step"],
+    )
+
+    model.to(device)
+
+    return model
