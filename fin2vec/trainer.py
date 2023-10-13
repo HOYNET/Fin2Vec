@@ -59,7 +59,7 @@ class Fin2VecTrainer:
             testLoss = self.test()
             print(f"Avg Test  Loss : {testLoss}")
             if savingPth:
-                path = f"{savingPth}/hoynet_{t}.pth"
+                path = f"{savingPth}/fin2vec_{t}.pth"
                 torch.save(self.model.state_dict(), path)
 
     def step(self) -> float:

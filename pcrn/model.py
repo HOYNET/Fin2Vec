@@ -188,4 +188,4 @@ def Config2PCRN(path, device) -> (PCRN, int):
 
     model.to(device)
 
-    return device, pcrn["term"], pcrn["inputs"]
+    return model, pcrn["term"], pcrn["inputs"]

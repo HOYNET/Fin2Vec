@@ -51,7 +51,7 @@ class PCRNTrainer:
             testLoss = self.test(t)
             print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
             if savingPth:
-                path = f"{savingPth}/hoynet_{t}.pth"
+                path = f"{savingPth}/pcrn_{t}.pth"
                 torch.save(self.model.state_dict(), path)
 
     def step(self, epoch) -> float:

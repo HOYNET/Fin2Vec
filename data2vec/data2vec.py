@@ -24,7 +24,7 @@ class Data2vec(nn.Module):
         self.model = model  # Fin2Vec
         self.__dict__.update(kwargs)
 
-        self.ema = EMA(self.model, decay, device)  # EMA acts as the teacher
+        self.ema = EMA(self.model, device, decay)  # EMA acts as the teacher
 
         self.ema_decay = decay
         self.ema_end_decay = endDecay
