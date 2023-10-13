@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from .parse import PCRNDataset
 from torch.utils.data import DataLoader, random_split
-from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 
 
@@ -26,7 +25,11 @@ class PCRNTrainer:
             dataset, [trainLength, len(dataset) - trainLength]
         )
         self.trainLoader, self.testLoader = (
-            DataLoader(traindataset, batch_size=batches, shuffle=True,),
+            DataLoader(
+                traindataset,
+                batch_size=batches,
+                shuffle=True,
+            ),
             DataLoader(testdataset, batch_size=batches, shuffle=True),
         )
         self.trainLength, self.testLength = (
@@ -36,7 +39,6 @@ class PCRNTrainer:
 
         self.optimizer = optimizer
         self.lossFn = lossFn
-        self.writer = SummaryWriter("runs/train_PCRN")
         self.device = device
 
     def __call__(self, epochs: int, savingPth: str = None) -> None:
@@ -44,8 +46,6 @@ class PCRNTrainer:
             print(f"Epoch {t} ", end="")
             trainLoss = self.step(t)
             testLoss = self.test(t)
-            self.writer.add_scalar("Loss/train_epoch", trainLoss, t)
-            self.writer.add_scalar("Loss/test_epoch", testLoss, t)
             print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
             if savingPth:
                 path = f"{savingPth}/hoynet_{t}.pth"
@@ -70,9 +70,6 @@ class PCRNTrainer:
             loss.backward()
             self.optimizer.step()
             trainLoss += loss.item()
-            self.writer.add_scalar(
-                "Loss/train", loss.item(), epoch * len(self.trainLoader) + idx
-            )
 
         trainLoss /= self.trainLength
         return trainLoss
@@ -115,7 +112,11 @@ class PCRNTrainer:
         fig, ax = plt.subplots(1, shape[-2], figsize=(10 * shape[-2], 10))
         for i in range(shape[-2]):
             ax[i].scatter(
-                range(shape[-1]), label[i, :], label="X", color="blue", alpha=0.7,
+                range(shape[-1]),
+                label[i, :],
+                label="X",
+                color="blue",
+                alpha=0.7,
             )
             ax[i].scatter(
                 range(shape[-1]),
@@ -129,7 +130,8 @@ class PCRNTrainer:
             ax[i].legend()
 
         # Log the figure to TensorBoard
-        self.writer.add_figure("Output Sequence", fig, global_step=step)
+        plt.savefig(".")
+        plt.close()
 
     def replace_nan_with_nearest(self, tensor: torch.tensor) -> torch.tensor:
         if tensor.dim() > 1:
@@ -149,6 +151,3 @@ class PCRNTrainer:
             isnan = torch.isnan(tensor)
 
         return tensor
-
-    def __del__(self):
-        self.writer.close()

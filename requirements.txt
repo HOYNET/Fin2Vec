@@ -1,4 +1,9 @@
 pandas
 numpy
-yaml
-# conda install pytorch torchvision torchaudio cpuonly -c pytorch
+pyyaml
+matplotlib
+python==3.9.*
+# must install manually torch according to your own environment
+# torch==1.10.0+cpu
+# torchvision==0.11.1+cpu
+# torchaudio==0.10.0+cpu
