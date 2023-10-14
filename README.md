@@ -1,19 +1,36 @@
+#Fin2Vec
 ## Prerequisites
 * install conda
-* create a new conda environment with requirements.txt
+* create a new conda environment named hoynet with environment.yml
+* PyTorch is essential. Set PyTorch according to your own local environment
 ```bash
-        conda create --name [your_enviromnet_name] --file requirements.txt
+$ conda env create -f environment.yml
 ```
 * activate the conda environment
 ```bash
-        conda activate [your_environment_name]
+$ conda activate hoynet
 ```
 * deactivate the conda enviroment when finished the jobs
 ```bash
-        conda deactivate
+$ conda deactivate
 ```
-
-* training
+## Training
+        check configuration(.yml) carefully and customize it
+* PCRN training
   ```bash
-  python training.py -p ./data/NASDAQ_DT_FC_STK_QUT.csv -c ./data/NASDAQ_FC_STK_IEM_IFO.csv -b 100 -e 100 -l 0.0001
+  $ python ./pcrn.py -c ./demo/training/pcrn.yml
   ```
+* Fin2Vec training
+  ```bash
+  $ python ./fin2vec.py -c ./demo/training/fin2vec.yml
+  ```
+## Demo
+        check configuration(.yml) carefully and customize it
+* Fin2Vec Inference
+  ```bash
+  $ python ./inference.py -c ./demo/inference/inference.yml
+  ```
+* Clustering with Word Embedding
+  ```bash
+  $ python ./wordClustering.py -c ./demo/wordClustering/wordClustering.yml
+  ``` 
