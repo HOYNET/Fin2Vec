@@ -15,7 +15,7 @@ $ conda activate hoynet
 $ conda deactivate
 ```
 ## Training
-        check configuration(.yml) carefully and customize it
+* check configuration(.yml) carefully and customize it
 ### PCRN training
   ```bash
   $ python ./pcrn.py -c ./demo/training/pcrn.yml
@@ -25,7 +25,7 @@ $ conda deactivate
   $ python ./fin2vec.py -c ./demo/training/fin2vec.yml
   ```
 ## Demo
-        check configuration(.yml) carefully and customize it
+* check configuration(.yml) carefully and customize it
 ### Fin2Vec Inference
   ```bash
   $ python ./inference.py -c ./demo/inference/inference.yml
