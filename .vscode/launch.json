@@ -2,31 +2,40 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: word_embedding",
+      "name": "Python: training PCRN",
       "type": "python",
       "request": "launch",
-      "program": "./inference_embedding.py",
+      "program": "./pcrn.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-c", "./word_embedding.yml"]
+      "args": ["-c", "./demo/training/pcrn.yml"]
     },
     {
-      "name": "Python: training demo",
+      "name": "Python: training Fin2Vec",
       "type": "python",
       "request": "launch",
-      "program": "./training_demo.py",
+      "program": "./fin2vec.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-c", "./configurations/demo/train.yml"]
+      "args": ["-c", "./demo/training/fin2vec.yml"]
     },
     {
-      "name": "Python: training",
+      "name": "Python: word clustering",
       "type": "python",
       "request": "launch",
-      "program": "training_F2V.py",
+      "program": "./wordClustering.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["-c", "config.yaml"]
+      "args": ["-c", "./demo/wordClustering/wordClustering.yml"]
+    },
+    {
+      "name": "Python: inference",
+      "type": "python",
+      "request": "launch",
+      "program": "./inference.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "./demo/inference/inference.yml"]
     },
     {
       "name": "Python: 현재 파일",
@@ -35,36 +44,6 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "justMyCode": true
-    },
-    {
-      "name": "Python: training.py 0",
-      "type": "python",
-      "request": "launch",
-      "program": "training.py",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "args": [
-        "-p",
-        "./data/data_2.csv",
-        "-i",
-        "./data/NASDAQ_FC_STK_IEM_IFO.csv",
-        "--batches",
-        "30",
-        "--epochs",
-        "150",
-        "--lr",
-        "0.0001",
-        "-e",
-        "10,10",
-        "--term",
-        "80",
-        "-s",
-        "Open,High,Low,Close,Volume,gold,bond,dow",
-        "-t",
-        "Close",
-        "-c",
-        "./checkpoints"
-      ]
     }
   ]
 }

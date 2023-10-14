@@ -1,0 +1,13 @@
+fin2vec:
+  ncode : 2685
+  embeddings: 10,10
+  d_model: 64
+  nhead: 8
+  d_hid: 64
+  outputs: 32
+  nlayers: 7
+  dropout: 0.2
+  type_: finance
+  data: ./data/data_2.csv
+  weight: ./train_3/checkpoints/fin2vec_30.pth
+  encoder: ./train_3/pcrn.yml

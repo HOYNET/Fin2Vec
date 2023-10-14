@@ -11,6 +11,7 @@ class Fin2VecDataset(Dataset):
         pricePath: str,
         inputs: list,
         term: int,
+        nelement: int,
         period: (str, str, str),
         cp949=True,
         ngroup: int = None,
@@ -33,6 +34,7 @@ class Fin2VecDataset(Dataset):
         self.timeline.sort()
 
         self.groups(ngroup)
+        self.nelement = nelement
 
     def __len__(self):
         return self.ngroup
@@ -61,7 +63,11 @@ class Fin2VecDataset(Dataset):
 
         src[msk] = src[msk] + _src.transpose((0, 2, 1))
         indices = np.random.permutation(np.arange(self.length, dtype=np.int32))
-        return {"src": src[indices][:100], "index": indices[:100], "mask": msk[:100]}
+        return {
+            "src": src[indices][: self.nelement],
+            "index": indices[: self.nelement],
+            "mask": msk[: self.nelement],
+        }
 
     def loadFromFile(self, codePath: str, pricePath: str, cp949: bool = True):
         self.rawCode: pd.DataFrame = (

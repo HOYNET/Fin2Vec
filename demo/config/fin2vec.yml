@@ -10,4 +10,4 @@ fin2vec:
   type_: finance
   data: ./data/data_2.csv
   # weight: .pth
-  encoder: ./configurations/demo/pcrn.yml
+  encoder: ./demo/config/pcrn.yml

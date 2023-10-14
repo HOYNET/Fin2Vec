@@ -164,7 +164,7 @@ class PCRN(nn.Module):
 
     def forward(self, x):
         result = self.encoder(x)
-        # result = self.decoder(result)
+        result = self.decoder(result)
         return result
 
 
@@ -188,4 +188,4 @@ def Config2PCRN(path, device) -> (PCRN, int):
 
     model.to(device)
 
-    return model, pcrn["term"], pcrn["inputs"]
+    return model, pcrn["term"], pcrn["inputs"], pcrn["outputs"]

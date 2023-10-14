@@ -1,0 +1,13 @@
+train:
+  device: cpu
+  target: ./demo/config/fin2vec.yml
+  data2vec: ./demo/config/data2vec.yml
+  data: 
+    priceFile : ./data/data_2.csv
+    codeFile : ./data/NASDAQ_FC_STK_IEM_IFO.csv
+    nelement : 1000
+  epochs: 500
+  batches: 1
+  lr: 0.0001
+  testRate: 0.2
+  ckpt: ./ # path to checkpoint

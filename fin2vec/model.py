@@ -45,9 +45,12 @@ class Fin2Vec(nn.Module):
     def forward(self, src: torch.tensor, idx: torch.tensor, msk: torch.tensor):
         srcShape, idxShape = src.shape, idx.shape
 
-        src += self.word2embedding(idx.to(torch.int64)).reshape(
-            idxShape[0], idxShape[1], -1
-        )
+        if len(idxShape) >= 2:
+            src += self.word2embedding(idx.to(torch.int64)).reshape(
+                idxShape[0], idxShape[1], -1
+            )
+        else:
+            src += self.word2embedding(idx.to(torch.int64)).reshape(idxShape[0], -1)
 
         # transforming
         src = self.tfLinear0(src)
@@ -85,6 +88,6 @@ def Config2Fin2Vec(pth: str, device) -> (Fin2Vec, PCRN, int):
 
     model.to(device)
 
-    encoder, term, inputs = Config2PCRN(fin2vec["encoder"], device)
+    pcrn, term, inputs, outputs = Config2PCRN(fin2vec["encoder"], device)
 
-    return model, encoder, term, inputs
+    return model, pcrn.encoder, term, inputs

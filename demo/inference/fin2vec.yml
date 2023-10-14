@@ -9,5 +9,5 @@ fin2vec:
   dropout: 0.2
   type_: finance
   data: ./data/data_2.csv
-  weight: ./train_3/checkpoints/fin2vec_18.pth
+  weight: ./train_3/checkpoints/fin2vec_30.pth
   encoder: ./train_3/pcrn.yml

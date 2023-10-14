@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, random_split
 import matplotlib
 import matplotlib.pyplot as plt
 
-matplotlib.use("TkAgg")
+matplotlib.use("TkAgg")  # for wsl user
 
 
 class PCRNTrainer:
@@ -133,7 +133,7 @@ class PCRNTrainer:
             ax[i].legend()
 
         # Log the figure to TensorBoard
-        plt.savefig(".")
+        plt.savefig(f"pcrn_{step}.png")
         plt.close()
 
     def replace_nan_with_nearest(self, tensor: torch.tensor) -> torch.tensor:

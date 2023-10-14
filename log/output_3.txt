@@ -1,0 +1,99 @@
+device : 'cuda:0'
+model set ... load weight from ./train_3/checkpoints/hoynet_43.pth
+done
+Data2Vec set ... done
+Dataset set ... done
+Epoch 0
+Avg Train Loss : 0.000601770051071071
+Avg Test  Loss : 6.126655407570069e-05
+Epoch 1
+Avg Train Loss : 0.0002703146417843527
+Avg Test  Loss : 4.327081624069251e-05
+Epoch 2
+Avg Train Loss : 0.0002037992948316969
+Avg Test  Loss : 3.785833850997733e-05
+Epoch 3
+Avg Train Loss : 0.00016794698476587654
+Avg Test  Loss : 2.5461264976911478e-05
+Epoch 4
+Avg Train Loss : 0.00014258372557378606
+Avg Test  Loss : 2.2001303750585067e-05
+Epoch 5
+Avg Train Loss : 0.0001237389749803697
+Avg Test  Loss : 1.7218035145560863e-05
+Epoch 6
+Avg Train Loss : 0.00010922527153525152
+Avg Test  Loss : 1.51524282500759e-05
+Epoch 7
+Avg Train Loss : 9.883135298878187e-05
+Avg Test  Loss : 1.3196184499975062e-05
+Epoch 8
+Avg Train Loss : 8.708131945240893e-05
+Avg Test  Loss : 1.104679085983662e-05
+Epoch 9
+Avg Train Loss : 7.865692705308903e-05
+Avg Test  Loss : 1.0843972358998143e-05
+Epoch 10
+Avg Train Loss : 7.215399546112167e-05
+Avg Test  Loss : 8.994287645691656e-06
+Epoch 11
+Avg Train Loss : 6.55742045637453e-05
+Avg Test  Loss : 7.821258213880355e-06
+Epoch 12
+Avg Train Loss : 5.9961813440168045e-05
+Avg Test  Loss : 6.846617475275707e-06
+Epoch 13
+Avg Train Loss : 5.585196531683323e-05
+Avg Test  Loss : 7.3737263392104065e-06
+Epoch 14
+Avg Train Loss : 5.1154260017938216e-05
+Avg Test  Loss : 6.283067659751396e-06
+Epoch 15
+Avg Train Loss : 4.725613293885544e-05
+Avg Test  Loss : 5.262637614578125e-06
+Epoch 16
+Avg Train Loss : 4.403021880534652e-05
+Avg Test  Loss : 5.646050453833595e-06
+Epoch 17
+Avg Train Loss : 4.079805248693447e-05
+Avg Test  Loss : 4.757266833621543e-06
+Epoch 18
+Avg Train Loss : 3.810268071902101e-05
+Avg Test  Loss : 4.636911944544408e-06
+Epoch 19
+Avg Train Loss : 3.53319910573191e-05
+Avg Test  Loss : 3.7721032981608005e-06
+Epoch 20
+Avg Train Loss : 3.299309435078612e-05
+Avg Test  Loss : 3.4849491839850088e-06
+Epoch 21
+Avg Train Loss : 3.088484227191657e-05
+Avg Test  Loss : 3.8352606793523595e-06
+Epoch 22
+Avg Train Loss : 2.901095963352418e-05
+Avg Test  Loss : 2.9858452421649417e-06
+Epoch 23
+Avg Train Loss : 2.6980060988535114e-05
+Avg Test  Loss : 3.1874384148977698e-06
+Epoch 24
+Avg Train Loss : 2.540003054036788e-05
+Avg Test  Loss : 2.48892876015816e-06
+Epoch 25
+Avg Train Loss : 2.3721087836747755e-05
+Avg Test  Loss : 2.5252345153603527e-06
+Epoch 26
+Avg Train Loss : 2.2360981415658898e-05
+Avg Test  Loss : 2.3183470489129832e-06
+Epoch 27
+Avg Train Loss : 2.1429269531836324e-05
+Avg Test  Loss : 2.2950785250941407e-06
+Epoch 28
+Avg Train Loss : 2.0276585405554216e-05
+Avg Test  Loss : 2.4690104282854007e-06
+Epoch 29
+Avg Train Loss : 1.8757703196570218e-05
+Avg Test  Loss : 2.1848806170510214e-06
+Epoch 30
+Avg Train Loss : 1.782946724233625e-05
+Avg Test  Loss : 2.1747351013345906e-06
+Epoch 31

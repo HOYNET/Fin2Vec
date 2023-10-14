@@ -1,7 +1,7 @@
 train:
   device: cpu
-  target: ./configurations/demo/fin2vec.yml
-  data2vec: ./configurations/demo/data2vec.yml
+  target: ./demo/config/fin2vec.yml
+  data2vec: ./demo/config/data2vec.yml
   data: 
     priceFile : ./data/data_2.csv
     codeFile : ./data/NASDAQ_FC_STK_IEM_IFO.csv

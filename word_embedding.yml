@@ -1,6 +1,0 @@
-inference:
-  device: cpu
-  target: ./fin2vec.yml
-  data: 
-    priceFile : ./data/data_2.csv
-    codeFile : ./data/NASDAQ_FC_STK_IEM_IFO.csv
