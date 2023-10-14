@@ -1,4 +1,4 @@
-#Fin2Vec
+# Fin2Vec
 ## Prerequisites
 * install conda
 * create a new conda environment named hoynet with environment.yml
