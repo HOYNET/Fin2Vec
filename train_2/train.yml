@@ -1,0 +1,12 @@
+train:
+  device: cuda:1
+  target: ./train_2/fin2vec.yml
+  data2vec: ./train_2/data2vec.yml
+  data: 
+    priceFile : ./data/data_2.csv
+    codeFile : ./data/NASDAQ_FC_STK_IEM_IFO.csv
+  epochs: 500
+  batches: 60
+  lr: 0.0001
+  testRate: 0.2
+  ckpt: ./train_2/checkpoints

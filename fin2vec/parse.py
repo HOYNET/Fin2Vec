@@ -13,78 +13,57 @@ class Fin2VecDataset(Dataset):
         term: int,
         period: (str, str, str),
         cp949=True,
-        range: (int, int) = None,
+        ngroup: int = None,
     ):
+        self.stock_info_dtype = np.dtype(
+            [
+                ("code", "U10"),  # 최대 10글자의 유니코드 문자열
+                ("index", "i4"),  # 4바이트 정수
+                ("minTime", "M8[ns]"),  # 나노초 정밀도의 날짜 시간
+                ("maxTime", "M8[ns]"),  # 나노초 정밀도의 날짜 시간
+                ("length", "i4"),  # 4바이트 정수
+            ]
+        )
         self.loadFromFile(codePath, pricePath, cp949)
         self.periodInspect(period, term)
         self.inputs = inputs
-        self.inputs.append("tck_iem_cd")
-        self.inputs.append("Date")
-
-        if range:
-            self.range: (int, int) = range
-        else:
-            self.range: (int, int) = (1, self.length)
-        assert self.range[0] < self.range[1] and self.range[1] <= self.length
-        self.timeline = np.array(
+        self.timeline: np.ndarray = np.array(
             self.rawPrice["Date"].drop_duplicates(), dtype=np.datetime64
         )
+        self.timeline.sort()
+
+        self.groups(ngroup)
 
     def __len__(self):
-        return self.length
+        return self.ngroup
 
     def __getitem__(self, index):
-        minTime, maxTime, tgtTerm = (
-            self.minTimes[index],
-            self.maxTimes[index],
-            self.lengths[index],
-        )
-        timeline = self.timeline[(self.timeline >= minTime) & (self.timeline < maxTime)]
-        tgtTerm = len(timeline)
-        startIdx = np.random.randint(low=0, high=tgtTerm - self.term)
-        endIdx = startIdx + self.term
-        startTime, endTime = timeline[startIdx].astype(
-            self.rawPrice["Date"].dtype
-        ), timeline[endIdx].astype(self.rawPrice["Date"].dtype)
-        rawData: pd.DataFrame = self.rawPrice.loc[
-            (self.rawPrice["Date"] >= startTime) & (self.rawPrice["Date"] < endTime),
-            self.inputs,
-        ]
-        codes, lengths = (
-            rawData["tck_iem_cd"].drop_duplicates(),
-            rawData.groupby("tck_iem_cd").size(),
-        )
-        lengths = lengths.reindex(codes).fillna(0).astype(int)
-        codes = lengths[lengths == self.term].index
+        msk, self.minTime, self.maxTime = (
+            self.groupMsk[index],
+            self.groupBegin[index],
+            self.groupEnd[index],
+        )  # msk should be inversed
 
-        filtered_data = rawData[rawData["tck_iem_cd"].isin(codes)]
-        filtered_data = filtered_data.sort_values(by=["Date"], ascending=True)
-        src = [
-            pd.DataFrame(x[1])
-            .sort_values(by=["Date"], ascending=True)
-            .drop(columns=["Date", "tck_iem_cd"])
-            .to_numpy()
-            .transpose(-1, -2)
-            for x in filtered_data.groupby("tck_iem_cd")
-        ]
-
-        src = np.array(src)
-        index = np.array(self.stockCode[self.stockCode.isin(codes)].index)
-        indices = np.random.permutation(len(src))
-        src, index, end = src[indices], index[indices], len(src)
-        if len(src) != self.length:
-            gap, shape = self.length - len(src), src.shape
-            padsrc, padindex = (
-                np.zeros((gap, shape[1], shape[2])),
-                np.zeros((gap), dtype=np.int64) - 1,
+        src = np.zeros(
+            shape=(
+                self.length,
+                len(self.inputs),
+                self.term,
             )
-            src, index = np.concatenate([src, padsrc], axis=0), np.concatenate(
-                [index, padindex], axis=0
-            )
+        )
+        srcDF = self.rawPrice[
+            self.rawPrice["tck_iem_cd"].isin(self.stockCode[msk])
+        ].groupby("tck_iem_cd", sort=True)
 
-        return {"src": src, "index": index, "end": end}
+        _src = np.array(
+            [self.tighten(group, (self.term, len(self.inputs))) for _, group in srcDF]
+        )
 
-    def loadFromFile(self, codePath, pricePath, cp949):
+        src[msk] = src[msk] + _src.transpose((0, 2, 1))
+        indices = np.random.permutation(np.arange(self.length, dtype=np.int32))
+        return {"src": src[indices][:100], "index": indices[:100], "mask": msk[:100]}
+
+    def loadFromFile(self, codePath: str, pricePath: str, cp949: bool = True):
         self.rawCode: pd.DataFrame = (
             pd.read_csv(codePath, encoding="CP949") if cp949 else pd.read_csv(codePath)
         )
@@ -97,7 +76,9 @@ class Fin2VecDataset(Dataset):
         self.dateFormat = period[2]
         self.starttime = datetime.strptime(period[0], self.dateFormat)
         self.endtime = datetime.strptime(period[1], self.dateFormat)
+
         self.termInspect(term)
+
         self.rawPrice["Date"] = pd.to_datetime(
             self.rawPrice["Date"], format=self.dateFormat
         )
@@ -105,20 +86,83 @@ class Fin2VecDataset(Dataset):
     def termInspect(self, term):
         self.term, self.period = term, (self.endtime - self.starttime).days
         assert self.term < self.period
+
         groups = self.rawPrice.groupby("tck_iem_cd")
-        self.minTimes = np.array(
-            [x[1]["Date"].min() for x in groups], dtype=np.datetime64
-        )
-        self.maxTimes = np.array(
-            [x[1]["Date"].max() for x in groups], dtype=np.datetime64
-        )
-        self.lengths = np.array(
-            [len(x[1]) for x in groups],
-            dtype=np.int64,
-        )
         lengths = groups.size()
         adjusted_lengths = lengths.reindex(self.stockCode).fillna(0).astype(int).values
         valid_codes = adjusted_lengths >= self.term
-        self.stockCode = self.stockCode[valid_codes]
-        self.rawPrice = self.rawPrice[self.rawPrice["tck_iem_cd"].isin(self.stockCode)]
+        self.stockCode = self.stockCode[valid_codes].sort_values()
+        self.rawPrice = (
+            self.rawPrice[self.rawPrice["tck_iem_cd"].isin(self.stockCode)]
+            .sort_values(by="tck_iem_cd")
+            .sort_values(by="Date")
+        )
+
+        groups = self.rawPrice.groupby("tck_iem_cd")
+
+        self.infos = np.array(
+            [
+                (
+                    x[0],
+                    i,
+                    x[1]["Date"].min(),
+                    x[1]["Date"].max(),
+                    len(x[1]),
+                )
+                for i, x in enumerate(groups)
+            ],
+            dtype=self.stock_info_dtype,
+        )
         self.length = len(self.stockCode)
+
+    def code2idx(self, code: str):
+        for i, _code in enumerate(self.stockCode):
+            if _code == code:
+                return i
+        return np.where(self.stockCode.str.match(code))[0]
+
+    def idx2code(self, idx: int):
+        return self.stockCode.iloc[idx]
+
+    def groups(self, ngroup: int):
+        self.ngroup = ngroup
+
+        self.groupMsk = np.random.random_integers(
+            size=(self.ngroup, self.length), low=0, high=1
+        ).astype(np.bool_)
+
+        startPos = np.random.random_integers(
+            low=0, high=len(self.timeline) - self.term - 1, size=(self.ngroup)
+        )
+        self.groupBegin = self.timeline[startPos]
+        self.groupEnd = self.timeline[startPos + self.term - 1]
+        self.groupMsk = (
+            (
+                np.tile(self.groupBegin, (len(self.infos["minTime"]), 1)).transpose(
+                    -1, -2
+                )
+                >= np.tile(self.infos["minTime"], (self.ngroup, 1))
+            )
+            & (
+                np.tile(self.groupEnd, (len(self.infos["maxTime"]), 1)).transpose(
+                    -1, -2
+                )
+                <= np.tile(self.infos["maxTime"], (self.ngroup, 1))
+            )
+            & self.groupMsk
+        )
+
+    def tighten(self, prices: pd.DataFrame, shape) -> pd.DataFrame:
+        result = (
+            prices[(prices["Date"] >= self.minTime) & (prices["Date"] <= self.maxTime)]
+            .reset_index(drop=True)
+            .sort_values(by="Date")[self.inputs]
+        )
+
+        if result.shape != shape:
+            result = pd.DataFrame(np.zeros(shape), columns=result.columns.copy())
+        assert result.shape == shape
+        return result
+
+    def ncodes(self):
+        return self.length

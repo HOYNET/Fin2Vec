@@ -1,13 +1,13 @@
 import torch
 from torch import nn
-import math
+import yaml
+from pcrn import PCRN, Config2PCRN
 
 
 # Finance to Vector
 class Fin2Vec(nn.Module):
     def __init__(
         self,
-        encoder: nn.Module,  # PCRN
         ncodes: int,
         embeddings: (int, int),
         outputs: int,
@@ -19,40 +19,40 @@ class Fin2Vec(nn.Module):
         decoder: nn.Module = None,
     ):
         super(Fin2Vec, self).__init__()
-        self.encoder = encoder
         self.d_model = d_model
-        self.ncodes = ncodes
+        self.ncodes = ncodes + 1
         self.embeddings = embeddings[0] * embeddings[1]
+        self.masked_code = ncodes
         self.word2embedding = nn.Embedding(self.ncodes, self.embeddings)
 
         self.inputDenseSrc = nn.Linear(self.embeddings, d_model)
         tfENCLayer = nn.TransformerEncoderLayer(
             d_model, nhead, d_hid, dropout, batch_first=True
         )
-        self.tfEncoder = nn.Sequential(
+
+        self.tfLinear0 = nn.Sequential(
             nn.Linear(self.embeddings, d_model),
             nn.ReLU(True),
-            nn.TransformerEncoder(tfENCLayer, nlayers),
+        )
+        self.tfEncoder = nn.TransformerEncoder(tfENCLayer, nlayers)
+        self.tfLinear1 = nn.Sequential(
             nn.Linear(d_model, outputs),
             nn.ReLU(True),
         )
 
         self.decoder = decoder
 
-    def forward(self, src: torch.tensor, idx: torch.tensor):
+    def forward(self, src: torch.tensor, idx: torch.tensor, msk: torch.tensor):
         srcShape, idxShape = src.shape, idx.shape
-        assert srcShape[0] == idxShape[0] and srcShape[1] == idxShape[1]
 
-        # tokenizing
-        src = src.reshape(srcShape[0] * srcShape[1], srcShape[2], srcShape[3])
-        with torch.no_grad():
-            src = self.encoder(src) * math.sqrt(self.d_model)
-        src = src.reshape(srcShape[0], srcShape[1], -1)
-        idx = self.word2embedding(idx).reshape(idxShape[0], idxShape[1], -1)
-        src += idx
+        src += self.word2embedding(idx.to(torch.int64)).reshape(
+            idxShape[0], idxShape[1], -1
+        )
 
         # transforming
-        result = self.tfEncoder(src)
+        src = self.tfLinear0(src)
+        result = self.tfEncoder(src, src_key_padding_mask=~msk)
+        result = self.tfLinear1(result)
 
         # decoding
         if self.decoder:
@@ -60,3 +60,31 @@ class Fin2Vec(nn.Module):
                 result = self.decoder(result)
 
         return result
+
+
+def Config2Fin2Vec(pth: str, device) -> (Fin2Vec, PCRN, int):
+    with open(pth) as f:
+        yml = yaml.load(f, Loader=yaml.FullLoader)
+        fin2vec = yml["fin2vec"]
+
+    model = Fin2Vec(
+        fin2vec["ncode"],
+        tuple(tuple(map(int, fin2vec["embeddings"].split(",")))),
+        fin2vec["outputs"],
+        fin2vec["d_model"],
+        fin2vec["nhead"],
+        fin2vec["d_hid"],
+        fin2vec["nlayers"],
+        fin2vec["dropout"],
+        None,
+    )
+
+    if "weight" in fin2vec:
+        model.load_state_dict(torch.load(fin2vec["weight"], map_location=device))
+        print("load weight")
+
+    model.to(device)
+
+    encoder, term, inputs = Config2PCRN(fin2vec["encoder"], device)
+
+    return model, encoder, term, inputs

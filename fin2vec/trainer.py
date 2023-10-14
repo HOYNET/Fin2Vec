@@ -1,35 +1,50 @@
 import torch
-from torch import nn
 from .parse import Fin2VecDataset
 from torch.utils.data import DataLoader, random_split
+from data2vec import Data2vec
+from .model import Fin2Vec
 
 
 class Fin2VecTrainer:
     def __init__(
         self,
-        model: nn.Module,
+        data2vec: Data2vec,
+        model: Fin2Vec,
         dataset: Fin2VecDataset,
         batches: int,
-        trainRate: float,
+        testRate: float,
         optimizer: torch.optim.Optimizer,
         device: torch.device,
         lossFn,
     ):
-        self.model = model
+        self.data2vec, self.model = data2vec, model
         self.model.to(device)
+        self.data2vec.to(device)
 
-        assert trainRate and trainRate < 1 and trainRate > 0
-        trainLength = int(len(dataset) * trainRate)
+        assert testRate and testRate < 1 and testRate > 0
+        testLength = int(len(dataset) * testRate)
         traindataset, testdataset = random_split(
-            dataset, [trainLength, len(dataset) - trainLength]
+            dataset, [len(dataset) - testLength, testLength]
         )
-        self.trainLoader, self.testLoader = DataLoader(
-            traindataset,
-            batch_size=batches,
-            shuffle=True,
-        ), DataLoader(testdataset, batch_size=batches, shuffle=True)
-        self.trainLength, self.testLength = len(self.trainLoader.dataset), len(
-            self.testLoader.dataset
+        self.trainLoader, self.testLoader = (
+            DataLoader(
+                traindataset,
+                batch_size=batches,
+                shuffle=True,
+                pin_memory=True,
+                num_workers=5,
+            ),
+            DataLoader(
+                testdataset,
+                batch_size=batches,
+                shuffle=True,
+                pin_memory=True,
+                num_workers=5,
+            ),
+        )
+        self.trainLength, self.testLength = (
+            len(self.trainLoader.dataset),
+            len(self.testLoader.dataset),
         )
 
         self.optimizer = optimizer
@@ -38,55 +53,65 @@ class Fin2VecTrainer:
 
     def __call__(self, epochs: int, savingPth: str = None) -> None:
         for t in range(epochs):
-            print(f"Epoch {t} ", end=" ")
+            print(f"Epoch {t}")
             trainLoss = self.step()
+            print(f"Avg Train Loss : {trainLoss}")
             testLoss = self.test()
-            print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
+            print(f"Avg Test  Loss : {testLoss}")
             if savingPth:
-                path = f"{savingPth}/hoynet_{t}.pth"
+                path = f"{savingPth}/fin2vec_{t}.pth"
                 torch.save(self.model.state_dict(), path)
 
     def step(self) -> float:
         self.model.train()
+        n = 0
         trainLoss = 0
 
-        for batch in self.trainLoader:
-            print("#", end="")
-            src, tgt = batch["src"].to(self.device).to(dtype=torch.float32), batch[
-                "tgt"
-            ].to(self.device).to(dtype=torch.float32)
-            src, tgt = self.maxPreProc(src), self.maxPreProc(tgt)
+        for i, batch in enumerate(self.trainLoader):
+            src, idx, msk = (
+                self.maxPreProc(batch["src"].to(self.device).to(dtype=torch.float32)),
+                batch["index"].to(self.device).to(dtype=torch.int32),
+                batch["mask"].to(self.device).to(dtype=torch.bool),
+            )
 
             self.optimizer.zero_grad()
-            pred = self.model(src.transpose(-1, -2), tgt[:, :, :-1].transpose(-1, -2))
-            assert not torch.isnan(pred).any()
-            loss = self.lossFn(pred.transpose(-1, -2), tgt[:, :, 1:])
+            pred, tgt, mask = self.data2vec(src, idx, msk)
+            assert not (torch.isnan(pred).any() and torch.isnan(tgt).any())
+
+            mask = mask.to(dtype=torch.bool)
+            loss = self.lossFn(pred[mask], tgt[mask])
             loss.backward()
             self.optimizer.step()
-            trainLoss += loss.item()
 
-        trainLoss /= self.trainLength
+            trainLoss += loss.item()
+            n += 1
+
+        trainLoss /= n
         return trainLoss
 
     def test(self) -> float:
         self.model.eval()
+        n = 0
         test_loss = 0
 
         with torch.no_grad():
-            for batch in self.testLoader:
-                print("#", end="")
-                src, tgt = batch["src"].to(self.device).to(dtype=torch.float32), batch[
-                    "tgt"
-                ].to(self.device).to(dtype=torch.float32)
-                src, tgt = self.maxPreProc(src), self.maxPreProc(tgt)
-
-                pred = self.model(
-                    src.transpose(-1, -2), tgt[:, :, :-1].transpose(-1, -2)
+            for i, batch in enumerate(self.testLoader):
+                src, idx, msk = (
+                    self.maxPreProc(
+                        batch["src"].to(self.device).to(dtype=torch.float32)
+                    ),
+                    batch["index"].to(self.device).to(dtype=torch.int32),
+                    batch["mask"].to(self.device).to(dtype=torch.bool),
                 )
-                assert not torch.isnan(pred).any()
-                test_loss += self.lossFn(pred.transpose(-1, -2), tgt[:, :, 1:])
 
-        test_loss /= self.testLength
+                pred, tgt, mask = self.data2vec(src, idx, msk)
+                assert not (torch.isnan(pred).any() and torch.isnan(tgt).any())
+                loss = self.lossFn(pred[mask], tgt[mask])
+
+                test_loss += loss.item()
+                n += 1
+
+        test_loss /= n
         return test_loss
 
     def maxPreProc(self, tensor: torch.tensor) -> torch.tensor:

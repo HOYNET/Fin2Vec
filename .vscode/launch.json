@@ -2,15 +2,31 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Python: word_embedding",
+      "type": "python",
+      "request": "launch",
+      "program": "./inference_embedding.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "./word_embedding.yml"]
+    },
+    {
+      "name": "Python: training demo",
+      "type": "python",
+      "request": "launch",
+      "program": "./training_demo.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "./configurations/demo/train.yml"]
+    },
+    {
       "name": "Python: training",
       "type": "python",
       "request": "launch",
-      "program": "training0.py",
+      "program": "training_F2V.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": [
-        "-c","config.yaml"
-      ]
+      "args": ["-c", "config.yaml"]
     },
     {
       "name": "Python: 현재 파일",

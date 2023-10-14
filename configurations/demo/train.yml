@@ -1,0 +1,12 @@
+train:
+  device: cpu
+  target: ./configurations/demo/fin2vec.yml
+  data2vec: ./configurations/demo/data2vec.yml
+  data: 
+    priceFile : ./data/data_2.csv
+    codeFile : ./data/NASDAQ_FC_STK_IEM_IFO.csv
+  epochs: 500
+  batches: 60
+  lr: 0.0001
+  testRate: 0.2
+  ckpt: ./checkpoints/ckpt_10-12_a

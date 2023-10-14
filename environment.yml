@@ -1,0 +1,15 @@
+name: hoynet
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.9
+  - pandas
+  - numpy
+  - pyyaml
+  - matplotlib
+  - pytorch
+  - torchvision
+  - torchaudio
+  - black
+  - scikit-learn

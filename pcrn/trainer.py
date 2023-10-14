@@ -2,8 +2,10 @@ import torch
 from torch import nn
 from .parse import PCRNDataset
 from torch.utils.data import DataLoader, random_split
-from torch.utils.tensorboard import SummaryWriter
+import matplotlib
 import matplotlib.pyplot as plt
+
+matplotlib.use("TkAgg")
 
 
 class PCRNTrainer:
@@ -25,18 +27,21 @@ class PCRNTrainer:
         traindataset, testdataset = random_split(
             dataset, [trainLength, len(dataset) - trainLength]
         )
-        self.trainLoader, self.testLoader = DataLoader(
-            traindataset,
-            batch_size=batches,
-            shuffle=True,
-        ), DataLoader(testdataset, batch_size=batches, shuffle=True)
-        self.trainLength, self.testLength = len(self.trainLoader.dataset), len(
-            self.testLoader.dataset
+        self.trainLoader, self.testLoader = (
+            DataLoader(
+                traindataset,
+                batch_size=batches,
+                shuffle=True,
+            ),
+            DataLoader(testdataset, batch_size=batches, shuffle=True),
+        )
+        self.trainLength, self.testLength = (
+            len(self.trainLoader.dataset),
+            len(self.testLoader.dataset),
         )
 
         self.optimizer = optimizer
         self.lossFn = lossFn
-        self.writer = SummaryWriter("runs/train_PCRN")
         self.device = device
 
     def __call__(self, epochs: int, savingPth: str = None) -> None:
@@ -44,11 +49,9 @@ class PCRNTrainer:
             print(f"Epoch {t} ", end="")
             trainLoss = self.step(t)
             testLoss = self.test(t)
-            self.writer.add_scalar("Loss/train_epoch", trainLoss, t)
-            self.writer.add_scalar("Loss/test_epoch", testLoss, t)
             print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
             if savingPth:
-                path = f"{savingPth}/hoynet_{t}.pth"
+                path = f"{savingPth}/pcrn_{t}.pth"
                 torch.save(self.model.state_dict(), path)
 
     def step(self, epoch) -> float:
@@ -56,9 +59,10 @@ class PCRNTrainer:
         trainLoss = 0
 
         for idx, batch in enumerate(self.trainLoader):
-            data, label = batch["data"].to(self.device).to(dtype=torch.float32), batch[
-                "label"
-            ].to(self.device).to(dtype=torch.float32)
+            data, label = (
+                batch["data"].to(self.device).to(dtype=torch.float32),
+                batch["label"].to(self.device).to(dtype=torch.float32),
+            )
             data, dmax = self.maxPreProc(data)
             label, lmax = self.maxPreProc(label)
 
@@ -69,9 +73,6 @@ class PCRNTrainer:
             loss.backward()
             self.optimizer.step()
             trainLoss += loss.item()
-            self.writer.add_scalar(
-                "Loss/train", loss.item(), epoch * len(self.trainLoader) + idx
-            )
 
         trainLoss /= self.trainLength
         return trainLoss
@@ -82,9 +83,10 @@ class PCRNTrainer:
 
         with torch.no_grad():
             for idx, batch in enumerate(self.testLoader):
-                data, label = batch["data"].to(self.device).to(
-                    dtype=torch.float32
-                ), batch["label"].to(self.device).to(dtype=torch.float32)
+                data, label = (
+                    batch["data"].to(self.device).to(dtype=torch.float32),
+                    batch["label"].to(self.device).to(dtype=torch.float32),
+                )
                 data, dmax = self.maxPreProc(data)
                 label, lmax = self.maxPreProc(label)
 
@@ -131,7 +133,8 @@ class PCRNTrainer:
             ax[i].legend()
 
         # Log the figure to TensorBoard
-        self.writer.add_figure("Output Sequence", fig, global_step=step)
+        plt.savefig(".")
+        plt.close()
 
     def replace_nan_with_nearest(self, tensor: torch.tensor) -> torch.tensor:
         if tensor.dim() > 1:
@@ -151,6 +154,3 @@ class PCRNTrainer:
             isnan = torch.isnan(tensor)
 
         return tensor
-
-    def __del__(self):
-        self.writer.close()

@@ -59,8 +59,8 @@ class PCRNDataset(Dataset):
             new = current + self.term
             if new > maxidx:
                 current, new = 0, self.term
-            data = data.iloc[current : new]
-            label = label.iloc[current : new]
+            data = data.iloc[current:new]
+            label = label.iloc[current:new]
         data = data.to_numpy().transpose((1, 0))
         label = label.to_numpy().transpose((1, 0))
 
