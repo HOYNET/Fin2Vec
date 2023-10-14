@@ -79,8 +79,9 @@ def Config2Fin2Vec(pth: str, device) -> (Fin2Vec, PCRN, int):
         None,
     )
 
-    if "weigth" in fin2vec:
+    if "weight" in fin2vec:
         model.load_state_dict(torch.load(fin2vec["weight"], map_location=device))
+        print("load weight")
 
     model.to(device)
 

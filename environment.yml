@@ -12,3 +12,4 @@ dependencies:
   - torchvision
   - torchaudio
   - black
+  - scikit-learn

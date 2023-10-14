@@ -2,6 +2,15 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Python: word_embedding",
+      "type": "python",
+      "request": "launch",
+      "program": "./inference_embedding.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "./word_embedding.yml"]
+    },
+    {
       "name": "Python: training demo",
       "type": "python",
       "request": "launch",

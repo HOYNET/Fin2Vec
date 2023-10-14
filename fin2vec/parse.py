@@ -115,6 +115,15 @@ class Fin2VecDataset(Dataset):
         )
         self.length = len(self.stockCode)
 
+    def code2idx(self, code: str):
+        for i, _code in enumerate(self.stockCode):
+            if _code == code:
+                return i
+        return np.where(self.stockCode.str.match(code))[0]
+
+    def idx2code(self, idx: int):
+        return self.stockCode.iloc[idx]
+
     def groups(self, ngroup: int):
         self.ngroup = ngroup
 
