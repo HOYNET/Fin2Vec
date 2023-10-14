@@ -16,7 +16,8 @@ $ conda deactivate
 ```
 ## Training
 * check configuration(.yml) carefully and customize it
-  
+* sample configurations(.yml) are in `demo/training` directory
+
 ### PCRN training (logging)
   ```bash
   $ python ./pcrn.py -c ./demo/training/pcrn.yml >> log.txt
@@ -28,6 +29,7 @@ $ conda deactivate
 
 ## Demo
 * check configuration(.yml) carefully and customize it
+* sample configurations(.yml) are in `demo/inference` or `demo/wordClustering` directory
   
 ### Fin2Vec Inference
   ```bash
