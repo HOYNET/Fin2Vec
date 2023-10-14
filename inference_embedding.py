@@ -6,6 +6,9 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
+from sklearn.metrics import pairwise_distances
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.manifold import TSNE
 
 matplotlib.use("TkAgg")
 
@@ -79,4 +82,41 @@ if __name__ == "__main__":
     plt.savefig("./maxIndex.png")
     plt.close()
 
-    print(1)
+    euclidean_distances = pairwise_distances(result, metric="euclidean")
+
+    # 가장 가까운 5개의 이웃을 찾기 (자기 자신을 포함하므로 k=6)
+    k = 6
+    nearest_points = np.argsort(euclidean_distances, axis=1)[:, :k]
+
+    # 결과 출력
+    for i, neighbors in enumerate(nearest_points):
+        print(
+            f"{i}th point's {k-1} nearest neighbors: {dataset.idx2code(neighbors[1:])}"
+        )
+        if i == 30:  # 상위 10개 데이터 포인트만 출력하여 예시로 확인합니다.
+            break
+
+    # cosine_sim = cosine_similarity(result)
+
+    # # 임계값 설정
+    # threshold = -0.4  # 예시 값
+
+    # # 임계값 이상의 코사인 유사도를 가지는 항목 쌍 찾기
+    # np.fill_diagonal(cosine_sim, -1)  # 대각선 요소를 -1로 설정하여 자기 자신과의 유사도를 제외
+    # pairs = np.column_stack(np.where(cosine_sim < threshold))
+
+    # # 결과 출력
+    # for pair in pairs:
+    #     print(f"0: {dataset.idx2code(pair[0])} 1:{dataset.idx2code(pair[1])}")
+    # # t-SNE를 사용하여 100차원 임베딩을 2차원으로 축소
+    # tsne = TSNE(n_components=2, perplexity=30, n_iter=300)
+    # tsne_results = tsne.fit_transform(cosine_sim)
+
+    # # 2D 그래프에 시각화
+    # plt.scatter(tsne_results[:, 0], tsne_results[:, 1], alpha=0.5)
+    # plt.title("t-SNE visualization of embeddings")
+    # plt.xlabel("Dimension 1")
+    # plt.ylabel("Dimension 2")
+    # plt.show()
+
+    # print(1)
