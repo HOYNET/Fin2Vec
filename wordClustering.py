@@ -77,35 +77,19 @@ if __name__ == "__main__":
     data = dataset.__getitem__(0)
 
     model.eval()
-    encoder.eval()
-
-    src, idx, msk = (
-        maxPreProc(torch.tensor(data["src"], dtype=torch.float32, device=device)),
-        torch.tensor(data["index"], dtype=torch.int32, device=device),
-        torch.tensor(data["mask"], dtype=torch.bool, device=device),
-    )
-    srcShape = src.shape
-    src = encoder(src) * math.sqrt(64)
-    src = src.reshape(srcShape[0], -1)
-    result = model(src, idx, msk)
-
     word2embedding = model.word2embedding
 
     result = word2embedding(torch.arange(2685))
-
-    # Torch 텐서를 Numpy 배열로 변환
     result = result.detach().numpy()
 
     euclidean_distances = pairwise_distances(result, metric="euclidean")
 
-    # 가장 가까운 5개의 이웃을 찾기 (자기 자신을 포함하므로 k=6)
     k = 6
     nearest_points = np.argsort(euclidean_distances, axis=1)[:, :k]
 
-    # 결과 출력
     for i, neighbors in enumerate(nearest_points):
         print(
             f"{i}th point's {k-1} nearest neighbors: {dataset.idx2code(neighbors[1:])}"
         )
-        if i == 30:  # 상위 30개 데이터 포인트만 출력하여 예시로 확인합니다.
+        if i == 30:  
             break
