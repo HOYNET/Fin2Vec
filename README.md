@@ -16,16 +16,19 @@ $ conda deactivate
 ```
 ## Training
 * check configuration(.yml) carefully and customize it
-### PCRN training
+  
+### PCRN training (logging)
   ```bash
-  $ python ./pcrn.py -c ./demo/training/pcrn.yml
+  $ python ./pcrn.py -c ./demo/training/pcrn.yml >> log.txt
   ```
-### Fin2Vec training
+### Fin2Vec training (logging)
   ```bash
-  $ python ./fin2vec.py -c ./demo/training/fin2vec.yml
+  $ python ./fin2vec.py -c ./demo/training/fin2vec.yml >> log.txt
   ```
+
 ## Demo
 * check configuration(.yml) carefully and customize it
+  
 ### Fin2Vec Inference
   ```bash
   $ python ./inference.py -c ./demo/inference/inference.yml
@@ -33,4 +36,11 @@ $ conda deactivate
 ### Clustering with Word Embedding
   ```bash
   $ python ./wordClustering.py -c ./demo/wordClustering/wordClustering.yml
-  ``` 
+  ```
+
+## Visualize
+
+### Visualize Loss
+  ```bash
+  $ python visualize/lossVisualize.py -f log.txt -i Title -l True
+  ```
