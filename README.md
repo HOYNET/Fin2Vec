@@ -19,6 +19,7 @@ $ conda deactivate
 * sample configurations(.yml) are in `demo/training` directory
 * <span style="color: red;">Caution! Ensure the configuration is well-written to recognize the device capabilities and prevent forced shutdowns </span>
 * <span style="color: red;">주의! 기기 성능에 맞게 실행 구성을 작성하시오. </span>
+* priceFile and codeFile is from [crawling](https://github.com/HOYNET/crawling)
 ### PCRN training (logging)
   ```bash
   $ python ./pcrn.py -c ./demo/training/pcrn.yml >> log.txt
