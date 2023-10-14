@@ -17,8 +17,8 @@ $ conda deactivate
 ## Training
 * check configuration(.yml) carefully and customize it
 * sample configurations(.yml) are in `demo/training` directory
-* <span style="color: red;">Caution! Ensure the configuration is well-written to recognize the device capabilities and prevent forced shutdowns </span>
-* <span style="color: red;">주의! 기기 성능에 맞게 실행 구성을 작성하시오. </span>
+<span style="color: red;">Caution! Ensure the configuration is well-written to recognize the device capabilities and prevent forced shutdowns </span>
+<span style="color: red;">주의! 기기 성능에 맞게 실행 구성을 작성하시오. </span>
 ### PCRN training (logging)
   ```bash
   $ python ./pcrn.py -c ./demo/training/pcrn.yml >> log.txt
@@ -31,8 +31,8 @@ $ conda deactivate
 ## Demo
 * check configuration(.yml) carefully and customize it
 * sample configurations(.yml) are in `demo/inference` or `demo/wordClustering` directory
-* <span style="color: red;">Caution! Ensure the configuration is well-written to recognize the device capabilities and prevent forced shutdowns </span>
-* <span style="color: red;">주의! 기기 성능에 맞게 실행 구성을 작성하시오. </span>
+<span style="color: red;">Caution! Ensure the configuration is well-written to recognize the device capabilities and prevent forced shutdowns </span>
+<span style="color: red;">주의! 기기 성능에 맞게 실행 구성을 작성하시오. </span>
 ### Fin2Vec Inference
   ```bash
   $ python ./inference.py -c ./demo/inference/inference.yml
