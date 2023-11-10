@@ -5,9 +5,9 @@ fin2vec:
   nhead: 8
   d_hid: 64
   outputs: 32
-  nlayers: 7
+  nlayers: 2 
   dropout: 0.2
   type_: finance
   data: ./data/data_2.csv
-  weight: ./train_3/checkpoints/fin2vec_30.pth
-  encoder: ./train_3/pcrn.yml
+  weight: ./train_2/checkpoints/fin2vec_5.pth
+  encoder: ./train_2/pcrn.yml

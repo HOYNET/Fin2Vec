@@ -1,11 +1,14 @@
 {
-    "editor.formatOnSave": true,
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnSave": true
-    },
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled":false,
-    "python.linting.flake8Enabled": true,
-    "python.formatting.provider": "none"
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.formatting.provider": "none",
+  "yaml.schemas": {
+    "file:///home/lhstar/.vscode-server/extensions/ms-python.python-2023.20.0/schemas/conda-environment.json": "file:///home/lhstar/SKKU/ML/NHContest/environment.yml"
+  }
 }

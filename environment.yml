@@ -2,6 +2,7 @@ name: hoynet
 channels:
   - pytorch
   - defaults
+  - pyg
 dependencies:
   - python=3.9
   - pandas
@@ -13,3 +14,4 @@ dependencies:
   - torchaudio
   - black
   - scikit-learn
+  - pyg  # This is the line added for PyTorch Geometric (pyG)
