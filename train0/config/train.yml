@@ -1,0 +1,11 @@
+train:
+  device: cpu
+  target: ./train0/config/pcrn.yml
+  data: 
+    codeFile : ../crawling/NASDAQ_FC_STK_IEM_IFO.csv
+    priceFile : ../crawling/NASDAQ/E_NASDAQ_DATA.csv
+  epochs: 50
+  batches: 100
+  lr: 0.006
+  trainRate: 0.8
+  ckpt: ./train0/ckpt # path to checkpoint

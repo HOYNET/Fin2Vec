@@ -11,6 +11,15 @@
       "args": ["-c", "./demo/training/pcrn.yml"]
     },
     {
+      "name": "Python: training PCRN _ 0",
+      "type": "python",
+      "request": "launch",
+      "program": "./pcrn.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["-c", "./train0/config/train.yml"]
+    },
+    {
       "name": "Python: training Fin2Vec",
       "type": "python",
       "request": "launch",

@@ -19,23 +19,22 @@ class PCRNDataset(Dataset):
             else pd.read_csv(codeFilePath)
         )
         self.rawPrice: pd.DataFrame = pd.read_csv(priceFilePath)
-        self.rawPrice = self.rawPrice.drop(columns=["Unnamed: 0"])
-        self.stockCode: pd.Series = self.rawCode["tck_iem_cd"].str.strip()
-        self.length = len(self.stockCode)
+        self.rawPrice["Date"] = pd.to_datetime(self.rawPrice["Date"], format="%Y-%m-%d")
+        self.rawPrice.sort_values(by=["Date"], inplace=True)
+        self.rawPrice["tck_iem_cd"] = self.rawPrice["tck_iem_cd"].str.strip()
 
         self.term = term
-
-        lengths = self.rawPrice.groupby("tck_iem_cd").size()
-        adjusted_lengths = lengths.reindex(self.stockCode).fillna(0).astype(int).values
-        self.cache = np.column_stack(
-            (np.zeros_like(adjusted_lengths), adjusted_lengths)
+        self.stkCnt = self.rawPrice.value_counts(["tck_iem_cd"])
+        self.stkCnt = (
+            self.stkCnt[self.stkCnt >= 2 * self.term].to_frame().reset_index(drop=False)
         )
+        self.stkCnt["tck_iem_cd"] = self.stkCnt["tck_iem_cd"].str.strip()
+        self.stkCnt["cum_cnt"] = (self.stkCnt["count"] - self.term).cumsum()
 
-        valid_codes = self.cache[:, 1] >= self.term
-        self.stockCode = self.stockCode[valid_codes]
-        self.rawPrice = self.rawPrice[self.rawPrice["tck_iem_cd"].isin(self.stockCode)]
-        self.cache = self.cache[valid_codes]
-        self.length = len(self.stockCode)
+        self.rawPrice = self.rawPrice[
+            self.rawPrice["tck_iem_cd"].isin(self.stkCnt["tck_iem_cd"])
+        ]
+        self.length = self.stkCnt.tail(1).iloc[0]["cum_cnt"]
 
         self.inputs = inputFeatures
         self.outputs = outputFeatures
@@ -44,23 +43,16 @@ class PCRNDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-        code: str = self.stockCode.iloc[index].strip()
-        raw: pd.DataFrame = self.rawPrice[self.rawPrice["tck_iem_cd"] == code].copy()
-        raw["Date"] = pd.to_datetime(raw["Date"], format="%Y-%m-%d")
-        raw.set_index("Date", inplace=True)
+        stk = self.stkCnt[self.stkCnt["cum_cnt"] >= index + 1].iloc[0]
+        tck, index = stk["tck_iem_cd"], stk["count"] - self.term - (
+            stk["cum_cnt"] - index
+        )
+        raw = self.rawPrice[self.rawPrice["tck_iem_cd"] == tck].iloc[
+            index : index + self.term
+        ]
 
         data = raw[self.inputs]
         label = raw[self.outputs]
-        if self.term:
-            current, maxidx = (
-                np.random.randint(self.cache[index][1] - self.term + 1),
-                self.cache[index][1],
-            )
-            new = current + self.term
-            if new > maxidx:
-                current, new = 0, self.term
-            data = data.iloc[current:new]
-            label = label.iloc[current:new]
         data = data.to_numpy().transpose((1, 0))
         label = label.to_numpy().transpose((1, 0))
 

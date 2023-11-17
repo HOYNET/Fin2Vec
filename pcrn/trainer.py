@@ -2,10 +2,8 @@ import torch
 from torch import nn
 from .parse import PCRNDataset
 from torch.utils.data import DataLoader, random_split
-import matplotlib
-import matplotlib.pyplot as plt
 
-matplotlib.use("TkAgg")  # for wsl user
+# matplotlib.use("TkAgg")  # for wsl user
 
 
 class PCRNTrainer:
@@ -18,6 +16,7 @@ class PCRNTrainer:
         optimizer: torch.optim.Optimizer,
         device: torch.device,
         lossFn,
+        scheduler=None,
     ):
         self.model = model
         self.model.to(device)
@@ -32,8 +31,16 @@ class PCRNTrainer:
                 traindataset,
                 batch_size=batches,
                 shuffle=True,
+                num_workers=2,
+                pin_memory=True,
             ),
-            DataLoader(testdataset, batch_size=batches, shuffle=True),
+            DataLoader(
+                testdataset,
+                batch_size=batches,
+                shuffle=True,
+                num_workers=2,
+                pin_memory=True,
+            ),
         )
         self.trainLength, self.testLength = (
             len(self.trainLoader.dataset),
@@ -43,16 +50,18 @@ class PCRNTrainer:
         self.optimizer = optimizer
         self.lossFn = lossFn
         self.device = device
+        self.scheduler = scheduler
 
     def __call__(self, epochs: int, savingPth: str = None) -> None:
+        self.savingPth = savingPth
         for t in range(epochs):
-            print(f"Epoch {t} ", end="")
+            print(f"Epoch {t} ")
             trainLoss = self.step(t)
-            testLoss = self.test(t)
-            print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
-            if savingPth:
+            if self.savingPth:
                 path = f"{savingPth}/pcrn_{t}.pth"
                 torch.save(self.model.state_dict(), path)
+            testLoss = self.test(t)
+            print(f" Avg Train Loss : {trainLoss:.8f} Avg Test Loss : {testLoss:.8f}")
 
     def step(self, epoch) -> float:
         self.model.train()
@@ -72,9 +81,22 @@ class PCRNTrainer:
             loss = self.lossFn(pred, label)
             loss.backward()
             self.optimizer.step()
-            trainLoss += loss.item()
 
-        trainLoss /= self.trainLength
+            if idx % 10 == 0:
+                trainLoss *= idx
+                trainLoss += loss.item()
+                trainLoss /= idx + 1
+                print(
+                    f"train - {idx} loss : {loss.item()} avg loss : {trainLoss}",
+                    end=" ",
+                )
+                if self.scheduler:
+                    self.scheduler.step()
+                if self.savingPth:
+                    path = f"{self.savingPth}/pcrn_{epoch}_{idx}.pth"
+                    torch.save(self.model.state_dict(), path)
+                    print(f"Weights Saved on {path} ...", end="")
+                print("")
         return trainLoss
 
     def test(self, epoch) -> float:
@@ -92,12 +114,14 @@ class PCRNTrainer:
 
                 pred = self.model(data)
                 assert not torch.isnan(pred).any()
-                test_loss += self.lossFn(pred, label)
-                self.visualize(
-                    pred * lmax, label * lmax, epoch * len(self.trainLoader) + idx
-                )
+                loss = self.lossFn(pred, label)
 
-        test_loss /= self.testLength
+                if idx % 10 == 0:
+                    test_loss *= idx
+                    test_loss += loss.item()
+                    test_loss /= idx + 1
+                    print(f"test - {idx} loss : {test_loss}")
+
         return test_loss
 
     def maxPreProc(self, tensor: torch.tensor) -> torch.tensor:
@@ -109,32 +133,32 @@ class PCRNTrainer:
 
         return tensor, max
 
-    def visualize(self, pred: torch.tensor, label: torch.tensor, step: int) -> None:
-        pred, label = pred[0].detach().cpu().numpy(), label[0].detach().cpu().numpy()
-        shape = pred.shape
-        fig, ax = plt.subplots(1, shape[-2], figsize=(10 * shape[-2], 10))
-        for i in range(shape[-2]):
-            ax[i].scatter(
-                range(shape[-1]),
-                label[i, :],
-                label="X",
-                color="blue",
-                alpha=0.7,
-            )
-            ax[i].scatter(
-                range(shape[-1]),
-                pred[i, :],
-                label="Prediction",
-                color="red",
-                alpha=0.7,
-            )
-            ax[i].set_xlabel("Time")
-            ax[i].set_ylabel("Value")
-            ax[i].legend()
+    # def visualize(self, pred: torch.tensor, label: torch.tensor, step: int) -> None:
+    #     pred, label = pred[0].detach().cpu().numpy(), label[0].detach().cpu().numpy()
+    #     shape = pred.shape
+    #     fig, ax = plt.subplots(1, shape[-2], figsize=(10 * shape[-2], 10))
+    #     for i in range(shape[-2]):
+    #         ax[i].scatter(
+    #             range(shape[-1]),
+    #             label[i, :],
+    #             label="X",
+    #             color="blue",
+    #             alpha=0.7,
+    #         )
+    #         ax[i].scatter(
+    #             range(shape[-1]),
+    #             pred[i, :],
+    #             label="Prediction",
+    #             color="red",
+    #             alpha=0.7,
+    #         )
+    #         ax[i].set_xlabel("Time")
+    #         ax[i].set_ylabel("Value")
+    #         ax[i].legend()
 
-        # Log the figure to TensorBoard
-        plt.savefig(f"pcrn_{step}.png")
-        plt.close()
+    #     # Log the figure to TensorBoard
+    #     plt.savefig(f"pcrn_{step}.png")
+    #     plt.close()
 
     def replace_nan_with_nearest(self, tensor: torch.tensor) -> torch.tensor:
         if tensor.dim() > 1:

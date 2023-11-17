@@ -24,7 +24,7 @@ class GNN(nn.Module):
         self.dense = nn.Linear(self.nhidden, self.noutput)
 
     def forward(self, x, edgeIndex, edgeWeight):
-        for i, m in enumerate(self.consConvs):
+        for i, m in enumerate(self.convs):
             x = self.relu(m(x, edgeIndex, edge_weight=edgeWeight))
             x = self.dropout(x)
 

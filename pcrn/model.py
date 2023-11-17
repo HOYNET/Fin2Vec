@@ -183,7 +183,8 @@ def Config2PCRN(path, device) -> (PCRN, int):
         tuple(tuple(map(int, pcrn["embeddings"].split(",")))),
     )
 
-    if "weigth" in pcrn:
+    if "weight" in pcrn:
+        print("PCRN Load Weights ...")
         model.load_state_dict(torch.load(pcrn["weight"], map_location=device))
 
     model.to(device)
