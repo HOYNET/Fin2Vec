@@ -1,11 +1,10 @@
 pcrn:
-  term: 100
-  inputs: ["Open", "High", "Low", "Close", "Volume", "gold", "bond"]
+  term: 300
+  inputs: ["Open", "High", "Low", "Close", "Volume"]
   outputs: ["Open", "Close"]
   hiddens: 64
   nlayers: 7
   fusions: 32
-  embeddings: 20,1
-  data: ../crawling/NASDAQ/E_NASDAQ_DATA.csv
-  weight: ./train0/ckpt/pcrn_0_860.pth
-  
+  embeddings: 10,10
+  data: ./data/data_2.csv
+  weight: ./pretrained/pcrn/hoynet_270.pth

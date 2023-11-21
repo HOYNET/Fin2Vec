@@ -3,7 +3,10 @@ from torch import nn
 from .parse import PCRNDataset
 from torch.utils.data import DataLoader, random_split
 
-# matplotlib.use("TkAgg")  # for wsl user
+import matplotlib
+import matplotlib.pyplot as plt
+
+matplotlib.use("TkAgg")  # for wsl user
 
 
 class PCRNTrainer:
@@ -82,7 +85,7 @@ class PCRNTrainer:
             loss.backward()
             self.optimizer.step()
 
-            if idx % 10 == 0:
+            if idx % 100 == 0:
                 trainLoss *= idx
                 trainLoss += loss.item()
                 trainLoss /= idx + 1
@@ -97,6 +100,7 @@ class PCRNTrainer:
                     torch.save(self.model.state_dict(), path)
                     print(f"Weights Saved on {path} ...", end="")
                 print("")
+                self.visualize(pred, label, idx)
         return trainLoss
 
     def test(self, epoch) -> float:
@@ -133,32 +137,32 @@ class PCRNTrainer:
 
         return tensor, max
 
-    # def visualize(self, pred: torch.tensor, label: torch.tensor, step: int) -> None:
-    #     pred, label = pred[0].detach().cpu().numpy(), label[0].detach().cpu().numpy()
-    #     shape = pred.shape
-    #     fig, ax = plt.subplots(1, shape[-2], figsize=(10 * shape[-2], 10))
-    #     for i in range(shape[-2]):
-    #         ax[i].scatter(
-    #             range(shape[-1]),
-    #             label[i, :],
-    #             label="X",
-    #             color="blue",
-    #             alpha=0.7,
-    #         )
-    #         ax[i].scatter(
-    #             range(shape[-1]),
-    #             pred[i, :],
-    #             label="Prediction",
-    #             color="red",
-    #             alpha=0.7,
-    #         )
-    #         ax[i].set_xlabel("Time")
-    #         ax[i].set_ylabel("Value")
-    #         ax[i].legend()
+    def visualize(self, pred: torch.tensor, label: torch.tensor, step: int) -> None:
+        pred, label = pred[0].detach().cpu().numpy(), label[0].detach().cpu().numpy()
+        shape = pred.shape
+        fig, ax = plt.subplots(1, shape[-2], figsize=(10 * shape[-2], 10))
+        for i in range(shape[-2]):
+            ax[i].scatter(
+                range(shape[-1]),
+                label[i, :],
+                label="X",
+                color="blue",
+                alpha=0.7,
+            )
+            ax[i].scatter(
+                range(shape[-1]),
+                pred[i, :],
+                label="Prediction",
+                color="red",
+                alpha=0.7,
+            )
+            ax[i].set_xlabel("Time")
+            ax[i].set_ylabel("Value")
+            ax[i].legend()
 
-    #     # Log the figure to TensorBoard
-    #     plt.savefig(f"pcrn_{step}.png")
-    #     plt.close()
+        # Log the figure to TensorBoard
+        plt.savefig(f"pcrn_{step}.png")
+        plt.close()
 
     def replace_nan_with_nearest(self, tensor: torch.tensor) -> torch.tensor:
         if tensor.dim() > 1:
